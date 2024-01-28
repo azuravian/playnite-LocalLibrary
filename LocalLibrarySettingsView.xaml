@@ -1,0 +1,20 @@
+﻿<UserControl x:Class="LocalLibrary.LocalLibrarySettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="400" d:DesignWidth="600">
+    
+    <StackPanel Margin="20">
+        <CheckBox IsChecked="{Binding Settings.UseActions}" Content="Use Actions instead of ROMS for storing Installer path." Margin="0,10,0,0"/>
+        <DockPanel Margin="0,20">
+            <ComboBox x:Name="PluginsList" ItemsSource="{Binding Settings.PluginSources}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedSource}" MinWidth="150"/>
+            <Button x:Name="ApplyPluginId" Content="Apply PluginId" Margin="20,0,0,0" Click="Button_ApplyPluginId_Click" HorizontalAlignment="Right"/>
+            <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to new games automatically" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,50,0"/>
+        </DockPanel>
+    </StackPanel>
+    
+    
+    
+</UserControl>

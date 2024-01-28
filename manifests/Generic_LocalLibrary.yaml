@@ -1,0 +1,50 @@
+AddonId: InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8
+Packages:
+  - Version: 1.0.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2021-11-23
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.0.0/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_0_0.pext
+    Changelog:
+      - Initial Release
+Packages:
+  - Version: 1.1.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2022-01-31
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.1.0/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_1_0.pext
+    Changelog:
+      - Changed from Top Bar button to Install Controller
+Packages:
+  - Version: 1.1.1
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2022-02-01
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.1.1/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_1_1.pext
+    Changelog:
+      - Fix - Will now run without admin rights
+Packages:
+  - Version: 1.1.2
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2022-03-18
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.1.2/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_1_2.pext
+    Changelog:
+      - Fix - Will now prompt for filename if setup.exe not found inside ISO
+Packages:
+  - Version: 1.2
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2022-04-22
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.2/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_2.pext
+    Changelog:
+      - New - Adds ability to use Game Actions as source path for local installs
+Packages:
+  - Version: 1.3
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2022-05-29
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.3/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_3.pext
+    Changelog:
+      - New - Will ask for Game.exe if no setup.exe found.
+Packages:
+  - Version: 1.3.1
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2022-10-09
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.3.1/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_3_1.pext
+    Changelog:
+      - New - Cleaned code from Jeshibu
