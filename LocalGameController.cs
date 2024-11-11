@@ -1,5 +1,5 @@
-﻿using Playnite.SDK.Plugins;
-using Playnite.SDK.Models;
+﻿using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,7 +9,7 @@ namespace LocalLibrary
     {
         private CancellationTokenSource watcherToken;
 
-        private LocalLibrary pluginInstance;
+        private readonly LocalLibrary pluginInstance;
 
         public LocalInstallController(Game game, LocalLibrary instance) : base(game)
         {
@@ -40,9 +40,9 @@ namespace LocalLibrary
                         return;
                     }
 
-                    if (Game.InstallDirectory == null)
+                    if (Game.InstallDirectory == null || Game.InstallDirectory == "")
                     {
-                        await Task.Delay(10000);
+                        await Task.Delay(2000);
                         continue;
                     }
                     else
@@ -65,7 +65,7 @@ namespace LocalLibrary
 
         private CancellationTokenSource watcherToken;
 
-        private LocalLibrary pluginInstance;
+        private readonly LocalLibrary pluginInstance;
 
         public LocalUninstallController(Game game, LocalLibrary instance) : base(game)
         {
@@ -80,7 +80,7 @@ namespace LocalLibrary
 
         public override void Uninstall(UninstallActionArgs args)
         {
-            pluginInstance.GameUninstaller(Game);
+            pluginInstance.GameUninstaller(Game, this);
             StartUninstallWatcher();
         }
 
@@ -98,7 +98,7 @@ namespace LocalLibrary
 
                     if (Game.InstallDirectory != null)
                     {
-                        await Task.Delay(10000);
+                        await Task.Delay(2000);
                         continue;
                     }
                     else
@@ -110,4 +110,4 @@ namespace LocalLibrary
             });
         }
     }
-} 
+}

@@ -1,12 +1,6 @@
-﻿
-using Playnite.SDK.Models;
-using Playnite.SDK;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+﻿using Playnite.SDK;
 using System.Windows;
 using System.Windows.Controls;
-using System;
 
 namespace LocalLibrary
 {
@@ -21,6 +15,24 @@ namespace LocalLibrary
         {
             var source = PluginsList.SelectedItem.ToString();
             LocalLibrary.PluginIdUpdate(source);
+        }
+
+        public void Button_ArchiveBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            var archivepath = API.Instance.Dialogs.SelectFile("Unarchive Executable|*.exe");
+            if (archivepath != null)
+            {
+                ArchivePath.Text = archivepath;
+                if (archivepath.ToLower().Contains("winrar"))
+                {
+                    RBRar.IsChecked = true;
+                }
+                else if (archivepath.ToLower().Contains("7z"))
+                {
+                    RB7z.IsChecked = true;
+                }
+            }
+
         }
     }
 }

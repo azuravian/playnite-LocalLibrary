@@ -1,24 +1,18 @@
 ﻿using Playnite.SDK;
-using Playnite.SDK.Plugins;
+using Playnite.SDK.Events;
 using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management.Automation;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using System.Management.Automation;
 using API = Playnite.SDK.API;
-using System.Reflection;
-using System.Runtime;
-using System.Security.Cryptography;
-using System.Collections.ObjectModel;
-using Playnite.SDK.Events;
-using System.Management.Automation.Runspaces;
-using System.Resources;
-using System.Threading;
-using System.Windows.Documents;
 
 namespace LocalLibrary
 {
@@ -91,10 +85,11 @@ namespace LocalLibrary
             Guid Id = Guid.Parse("9244ed08-9948-4f7b-bb26-95661e34b038");
             IEnumerable<Game> games = API.Instance.Database.Games;
 
-            GlobalProgressOptions globalProgressOptions = new GlobalProgressOptions(
-                $"Local Library - Applying Plugin ID...",
-                true
-            );
+            GlobalProgressOptions globalProgressOptions1 = new GlobalProgressOptions(
+                            $"Local Library - Applying Plugin ID...",
+                            true
+                        );
+            GlobalProgressOptions globalProgressOptions = globalProgressOptions1;
             globalProgressOptions.IsIndeterminate = false;
 
             API.Instance.Dialogs.ActivateGlobalProgress((activateGlobalProgress) =>
@@ -136,17 +131,17 @@ namespace LocalLibrary
             }, globalProgressOptions);
 
 
-            
+
         }
 
-        public void GameSelect(Game selectedGame)
+        //Prompt user for installation location and create Play action
+        public void GameSelect(Game selectedGame, LocalInstallController install)
         {
             string gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe").Replace(selectedGame.Name, "{Name}");
 
-            if (!String.IsNullOrEmpty(gameExe))
+            if (!string.IsNullOrEmpty(gameExe))
             {
                 GameAction action = new GameAction();
-                GameAction uaction = new GameAction();                
 
                 try
                 {
@@ -184,6 +179,7 @@ namespace LocalLibrary
                         if (g.Name == "Play")
                         {
                             selectedGame.IsInstalled = true;
+                            selectedGame.IsInstalling = false;
                             selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
                         }
                     }
@@ -196,49 +192,73 @@ namespace LocalLibrary
                 }
                 API.Instance.Database.Games.Update(selectedGame);
             }
-            this.Dispose();
+            else
+            {
+                selectedGame.IsInstalling = false;
+                selectedGame.InstallDirectory = null;
+                selectedGame.IsInstalled = false;
+                API.Instance.Database.Games.Update(selectedGame);
+            }
+            install.Dispose();
         }
 
         private void ProcessEnded(object sender, EventArgs e)
         {
-            var process = sender as Process;
-            if (process != null)
+            if (sender is Process process)
             {
-                var eCode = process.ExitCode;
+                _ = process.ExitCode;
             }
         }
-        
+
+        public string GetArchiveCommand(string gameImagePath, string gameInstallArgs)
+        {
+            var response = MessageBox.Show("The installer path points to an archive.  Would you like to select a folder to extract the archive to?", "Archive Detected", MessageBoxButton.YesNo);
+            if (response == MessageBoxResult.No)
+            {
+                return "failed";
+            }
+            string extractpath = API.Instance.Dialogs.SelectFolder();
+            if (Settings.Settings.RB7z)
+            {
+                gameInstallArgs = " x -o" + extractpath + " " + gameImagePath;
+            }
+            else if (Settings.Settings.RBRar)
+            {
+                gameInstallArgs = " x " + gameImagePath + " " + extractpath;
+            }
+            return gameInstallArgs;
+        }
+
         public void GameInstaller(Game game, LocalInstallController install)
         {
             Game selectedGame = game;
 
+            int code = 0;
+            bool failed = false;
+            string exce = "";
             string gameImagePath = null;
             string gameInstallArgs = null;
+            List<GameAction> gameActions = null;
+            List<GameRom> gameRoms = null;
             List<string> driveList = new List<string>();
             List<string> driveList2 = new List<string>();
             string command = null;
             string driveLetter = null;
-            int code;
+            string[] extensions = { "7z", "rar", "zip" };
+            bool archive = false;
 
             if (Settings.Settings.UseActions)
             {
                 try
                 {
-                    List<GameAction> gameActions = selectedGame.GameActions.ToList();
-                    try
+                    gameActions = selectedGame.GameActions.ToList();
+                    foreach (GameAction g in gameActions)
                     {
-                        foreach (GameAction g in gameActions)
+                        if (g.Name == "Install")
                         {
-                            if (g.Name == "Install")
-                            {
-                                gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path.Replace(": ", " - ");
-                                gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments.Replace(": ", " - ");
-                            }
+                            gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path.Replace(": ", " - ");
+                            gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments.Replace(": ", " - ");
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error(ex.ToString());
                     }
                 }
                 catch (Exception ex)
@@ -250,10 +270,8 @@ namespace LocalLibrary
             {
                 try
                 {
-                    {
-                        var gameRoms = selectedGame.Roms.ToList();
-                        gameImagePath = gameRoms[0].Path;
-                    }
+                    gameRoms = selectedGame.Roms.ToList();
+                    gameImagePath = gameRoms[0].Path;
                 }
                 catch (Exception ex)
                 {
@@ -304,6 +322,19 @@ namespace LocalLibrary
                 {
                     command = gameImagePath;
                 }
+                else if (extensions.Any(x => gameImagePath.EndsWith(x)))
+                {
+                    archive = true;
+                    command = Settings.Settings.ArchivePath;
+                    gameInstallArgs = GetArchiveCommand(gameImagePath, gameInstallArgs);
+                    if (gameInstallArgs == "failed")
+                    {
+                        API.Instance.Dialogs.ShowErrorMessage("Installing a game stored as an archive requires that you select a folder to extract to.", "Install Canceled");
+                        selectedGame.IsInstalling = false;
+                        API.Instance.Database.Games.Update(selectedGame);
+                        return;
+                    }
+                }
                 else if (!Path.HasExtension(gameImagePath))
                 {
                     if (!Directory.Exists(gameImagePath))
@@ -345,11 +376,11 @@ namespace LocalLibrary
                 }
                 else
                 {
-                    API.Instance.Dialogs.ShowErrorMessage("The provided Rom file has an invalid extension. Please provide valid iso/exe/directory.", "Invalid Executable/ISO.");
+                    API.Instance.Dialogs.ShowErrorMessage("The provided Rom file has an invalid extension. Please provide valid file or directory.", "Invalid filetype.");
                     return;
                 }
             }
-            if (!File.Exists(command))
+            if (!File.Exists(command) && !archive)
             {
                 MessageBoxResult result = MessageBox.Show("Setup.exe was not found in your ISO.  Would you like to select the appropriate .exe?", "Setup.exe not found", MessageBoxButton.YesNo);
                 if (result == MessageBoxResult.Yes)
@@ -358,7 +389,7 @@ namespace LocalLibrary
                 }
                 else
                 {
-                    GameSelect(selectedGame);
+                    return; //
                 }
             }
             try
@@ -391,18 +422,9 @@ namespace LocalLibrary
                     code = p.ExitCode;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return;
-            }
-            if (code != 0)
-            {
-                MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
-                if (result == MessageBoxResult.No)
-                {
-                    install.Dispose();
-                    return;
-                }
+                exce = ex.Message;
             }
             if (gameImagePath.ToLower().EndsWith(".iso"))
             {
@@ -413,18 +435,163 @@ namespace LocalLibrary
                     dismountDisk.Invoke();
                 }
             }
-
-            GameSelect(selectedGame);
+            if (code != 0 || exce != "")
+            {
+                failed = true;
+                MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
+                if (result == MessageBoxResult.No)
+                {
+                    return;
+                }
+            }
+            if (Settings.Settings.UseActions && gameActions.Count > 1)
+            {
+                Install_Extras(gameActions);                
+            }
+            else if (!Settings.Settings.UseActions && gameRoms.Count > 1)
+            {
+                Install_Extras(gameRoms);
+            }
+            if (!failed)
+            {
+                GameSelect(selectedGame, install);
+            }
+            return;
         }
 
-        public void GameUninstaller(Game game)
+        private void Delete_PlayActions(IEnumerable<GameAction> actions, Game selectedGame)
         {
+            if (actions != null)
+            {
+                try
+                {
+                    foreach (var action in actions.ToList())
+                    {
+                        if (action.Name == "Play")
+                        {
+                            selectedGame.GameActions.Remove(action);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex.ToString());
+                    API.Instance.Dialogs.ShowErrorMessage("The game was uninstalled, but there was an error removing the Play Action or no Play Action was found.\n\nYou will need to manually remove any Play actions associated with this game.  Please check the log for details.", "Action Failed");
+                }
+            }
+        }
+
+        public void Install_Extras(List<GameRom> extras)
+        {
+            foreach (GameRom extra in extras.Skip(1))
+            {
+                int code = 0;
+                string exce = "";
+                string command = null;
+                string extraInstallArgs = null;
+                var extraPath = extra.Path;
+                if (Path.GetFileName(extraPath).EndsWith(".exe"))
+                {
+                    command = extraPath;
+                }
+                try
+                {
+                    using (Process p = new Process())
+                    {
+                        String dpath = "";
+                        p.StartInfo.FileName = command;
+                        p.StartInfo.UseShellExecute = true;
+                        if (extraInstallArgs != null)
+                        {
+                            p.StartInfo.Arguments = extraInstallArgs;
+                        }
+                        dpath = Path.GetDirectoryName(extraPath);
+
+                        p.StartInfo.WorkingDirectory = dpath;
+                        p.StartInfo.Verb = "runas";
+                        p.Start();
+                        p.WaitForExit();
+                        code = p.ExitCode;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    exce = ex.Message;
+                }
+                if (code != 0 || exce != "")
+                {
+                    MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
+                    if (result == MessageBoxResult.No)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        public void Install_Extras(List<GameAction> extras)
+        {
+            foreach (GameAction extra in extras.Skip(1))
+            {
+                int code = 0;
+                string exce = "";
+                string command = null;
+                string extraInstallArgs = null;
+                var extraPath = extra.Path;
+                if (Path.GetFileName(extraPath).EndsWith(".exe"))
+                {
+                    command = extraPath;
+                }
+                try
+                {
+                    using (Process p = new Process())
+                    {
+                        String dpath = "";
+                        p.StartInfo.FileName = command;
+                        p.StartInfo.UseShellExecute = true;
+                        if (extraInstallArgs != null)
+                        {
+                            p.StartInfo.Arguments = extraInstallArgs;
+                        }
+                        dpath = Path.GetDirectoryName(extraPath);
+
+                        p.StartInfo.WorkingDirectory = dpath;
+                        p.StartInfo.Verb = "runas";
+                        p.Start();
+                        p.WaitForExit();
+                        code = p.ExitCode;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    exce = ex.Message;
+                }
+                if (code != 0 || exce != "")
+                {
+                    MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
+                    if (result == MessageBoxResult.No)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        public void GameUninstaller(Game game, LocalUninstallController uninstall)
+        {
+            int code = 0;
+            string exce = "";
             Game selectedGame = game;
+            var actions =
+                from action in selectedGame.GameActions
+                where action.Name == "Play"
+                && action.IsPlayAction == true
+                select action;
             if (selectedGame != null)
             {
                 string uninstaller = "";
                 string installDir = selectedGame.InstallDirectory.Replace("{Name}", selectedGame.Name);
-                if ( Directory.Exists(installDir) )
+                if (Directory.Exists(installDir))
                 {
                     string[] idFiles = Directory.GetFiles(installDir, "*unins*", SearchOption.AllDirectories);
                     foreach (string idFile in idFiles)
@@ -455,6 +622,49 @@ namespace LocalLibrary
                     }
                 }
 
+                if (uninstaller == "")
+                {
+                    MessageBoxResult result = MessageBox.Show("No uninstaller could be found in the installation directory.  Would you like to select the uninstaller?", "Uninstaller not found", MessageBoxButton.YesNo);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        uninstaller = API.Instance.Dialogs.SelectFile("Uninstaller|*.exe");
+                    }
+                    else
+                    {
+                        MessageBoxResult result2 = MessageBox.Show("No uninstaller is available.  Would you like to delete the games installation folder?\n\nInstallation Folder: " + installDir + "\n\nWarning: This process is not able to be reversed.", "Uninstaller not found", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        if (result2 == MessageBoxResult.Yes)
+                        {
+                            string unmessage = "";
+                            var dir = new DirectoryInfo(installDir);
+                            dir.Delete(true);
+                            if (Settings.Settings.RemovePlay)
+                            {
+                                Delete_PlayActions(actions, selectedGame);
+                                unmessage = "The installation folder was successfully removed.  The game has had its play action(s) removed and is marked as uninstalled.";
+                            }
+                            else
+                            {
+                                unmessage = "The installation folder was successfully removed and the game has been marked as uninstalled.";
+                            }
+                            selectedGame.InstallDirectory = null;
+                            selectedGame.IsInstalled = false;
+                            API.Instance.Database.Games.Update(selectedGame);
+
+                            API.Instance.Dialogs.ShowMessage(unmessage, "Uninstall Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                            uninstall.Dispose();
+                            return;
+                        }
+                        else
+                        {
+                            API.Instance.Dialogs.ShowErrorMessage("The game was not uninstalled.  No changes have been made.", "Game not Uninstalled");
+                            game.IsUninstalling = false;
+                            API.Instance.Database.Games.Update(selectedGame);
+                            uninstall.Dispose();
+                            return;
+                        }
+                    }
+                }
+
                 try
                 {
                     using (Process p = new Process())
@@ -467,40 +677,28 @@ namespace LocalLibrary
                         p.StartInfo.Verb = "runas";
                         p.Start();
                         p.WaitForExit();
+                        code = p.ExitCode;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    exce = ex.Message;
+                }
+
+                if (code != 0 || exce != "")
+                {
+                    API.Instance.Dialogs.ShowErrorMessage("The uninstall process was either canceled or failed.  The game was not uninstalled.  No changes have been made.", "Game not Uninstalled");
+                    game.IsUninstalling = false;
+                    API.Instance.Database.Games.Update(selectedGame);
+                    uninstall.Dispose();
                     return;
                 }
 
-                var actions =
-                    from action in selectedGame.GameActions
-                    where action.Name == "Play"
-                    && action.IsPlayAction == true
-                    select action;
-
-                if (actions != null)
-                {
-                    try
-                    {
-                        foreach (var action in actions.ToList())
-                        {
-                            selectedGame.GameActions.Remove(action);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error(ex.ToString());
-                        API.Instance.Dialogs.ShowErrorMessage("There was an error removing the Play Action or no Play Action was found.\n\nPlease check the log for details.", "Action Failed");
-                        return;
-                    }
-                }
-
+                Delete_PlayActions(actions, selectedGame);
                 selectedGame.InstallDirectory = null;
                 selectedGame.IsInstalled = false;
                 API.Instance.Database.Games.Update(selectedGame);
-                this.Dispose();
+                uninstall.Dispose();
             }
         }
 

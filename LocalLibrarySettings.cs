@@ -1,13 +1,7 @@
 ﻿using Playnite.SDK;
 using Playnite.SDK.Data;
 using Playnite.SDK.Models;
-using Playnite.SDK.Plugins;
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Runtime;
-using System.Windows;
 using System.Windows.Controls;
 
 namespace LocalLibrary
@@ -16,9 +10,12 @@ namespace LocalLibrary
     {
         private bool useactions = false;
         public bool UseActions { get => useactions; set => SetValue(ref useactions, value); }
-        
-        private List<GameSource>pluginsources = null;
-        public List<GameSource>PluginSources { get => pluginsources; set => SetValue(ref pluginsources, value); }
+
+        private bool removeplay = true;
+        public bool RemovePlay { get => removeplay; set => SetValue(ref removeplay, value); }
+
+        private List<GameSource> pluginsources = null;
+        public List<GameSource> PluginSources { get => pluginsources; set => SetValue(ref pluginsources, value); }
 
         private List<GameSource> includedsources = null;
         public List<GameSource> IncludedSources { get => pluginsources; set => SetValue(ref includedsources, value); }
@@ -31,6 +28,15 @@ namespace LocalLibrary
 
         private bool autoupdate = false;
         public bool AutoUpdate { get => autoupdate; set => SetValue(ref autoupdate, value); }
+
+        private string archivepath = string.Empty;
+        public string ArchivePath { get => archivepath; set => SetValue(ref archivepath, value); }
+
+        private bool rb7z = true;
+        public bool RB7z { get => rb7z; set => SetValue(ref rb7z, value); }
+
+        private bool rbrar = false;
+        public bool RBRar { get => rbrar; set => SetValue(ref rbrar, value); }
         // Playnite serializes settings object to a JSON object and saves it as text file.
         // If you want to exclude some property from being saved then use `JsonDontSerialize` ignore attribute.
     }
@@ -38,7 +44,7 @@ namespace LocalLibrary
     public class LocalLibrarySettingsViewModel : ObservableObject, ISettings
     {
         private readonly LocalLibrary plugin;
-        private LocalLibrarySettings editingClone { get; set; }
+        private LocalLibrarySettings EditingClone { get; set; }
 
         private LocalLibrarySettings settings;
         public LocalLibrarySettings Settings
@@ -69,14 +75,14 @@ namespace LocalLibrary
                 Settings = new LocalLibrarySettings();
             }
         }
-        
+
         public void BeginEdit()
         {
             // Code executed when settings view is opened and user starts editing values.
-            editingClone = Serialization.GetClone(Settings);
+            EditingClone = Serialization.GetClone(Settings);
 
             Settings.PluginSources = GetSources();
-            
+
             List<GameSource> GetSources()
             {
                 List<GameSource> Sources = new List<GameSource>();
@@ -94,7 +100,7 @@ namespace LocalLibrary
         {
             // Code executed when user decides to cancel any changes made since BeginEdit was called.
             // This method should revert any changes made to Option1 and Option2.
-            Settings = editingClone;
+            Settings = EditingClone;
         }
 
         public void EndEdit()

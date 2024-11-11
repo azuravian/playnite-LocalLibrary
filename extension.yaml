@@ -1,7 +1,7 @@
 ﻿Id: LocalLibrary_fd5887bb-2da2-4044-bea3-9896aea2f5b8
-Name: Generic Plugin
+Name: Local Library
 Author: Azuravian
-Version: 1.3.1
+Version: 1.0
 Module: LocalLibrary.dll
-Type: GenericPlugin
+Type: GameLibrary
 Icon: icon.png
