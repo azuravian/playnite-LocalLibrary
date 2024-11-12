@@ -26,7 +26,7 @@ namespace LocalLibrary
 
         public LocalLibrarySettingsView SettingsView { get; private set; }
 
-        public override Guid Id { get; } = Guid.Parse("9244ed08-9948-4f7b-bb26-95661e34b038");
+        public override Guid Id { get; } = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5");
 
         public override string Name => "Local Library";
 
@@ -82,7 +82,7 @@ namespace LocalLibrary
 
         public static void PluginIdUpdate(string source)
         {
-            Guid Id = Guid.Parse("9244ed08-9948-4f7b-bb26-95661e34b038");
+            Guid Id = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5");
             IEnumerable<Game> games = API.Instance.Database.Games;
 
             GlobalProgressOptions globalProgressOptions1 = new GlobalProgressOptions(
@@ -460,16 +460,21 @@ namespace LocalLibrary
                 MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
                 if (result == MessageBoxResult.No)
                 {
+                    selectedGame.IsInstalling = false;
+                    selectedGame.InstallDirectory = null;
+                    selectedGame.IsInstalled = false;
+                    API.Instance.Database.Games.Update(selectedGame);
+                    install.Dispose();
                     return;
                 }
             }
             if (Settings.Settings.UseActions && gameActions.Count > 1)
             {
-                Install_Extras(gameActions);                
+                Install_Extras(gameActions, selectedGame, install);                
             }
             else if (!Settings.Settings.UseActions && gameRoms.Count > 1)
             {
-                Install_Extras(gameRoms);
+                Install_Extras(gameRoms, selectedGame, install);
             }
             if (!failed)
             {
@@ -500,7 +505,7 @@ namespace LocalLibrary
             }
         }
 
-        public void Install_Extras(List<GameRom> extras)
+        public void Install_Extras(List<GameRom> extras, Game selectedGame, LocalInstallController install)
         {
             foreach (GameRom extra in extras)
             {
@@ -542,13 +547,18 @@ namespace LocalLibrary
                     MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
                     if (result == MessageBoxResult.No)
                     {
+                        selectedGame.IsInstalling = false;
+                        selectedGame.InstallDirectory = null;
+                        selectedGame.IsInstalled = false;
+                        API.Instance.Database.Games.Update(selectedGame);
+                        install.Dispose();
                         return;
                     }
                 }
             }
         }
 
-        public void Install_Extras(List<GameAction> extras)
+        public void Install_Extras(List<GameAction> extras, Game selectedGame, LocalInstallController install)
         {
             foreach (GameAction extra in extras)
             {
@@ -590,6 +600,11 @@ namespace LocalLibrary
                     MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
                     if (result == MessageBoxResult.No)
                     {
+                        selectedGame.IsInstalling = false;
+                        selectedGame.InstallDirectory = null;
+                        selectedGame.IsInstalled = false;
+                        API.Instance.Database.Games.Update(selectedGame);
+                        install.Dispose();
                         return;
                     }
                 }

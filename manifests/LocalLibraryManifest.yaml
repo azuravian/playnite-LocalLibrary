@@ -1,0 +1,8 @@
+AddonId: LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5
+Packages:
+  - Version: 1.0.0
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2024-11-11
+    PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/1.0.0/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_0.pext
+    Changelog:
+      - Initial Release
