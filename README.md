@@ -35,8 +35,8 @@ Adds a library to Playnite for managing locally stored games.
   ### Update Installation Files
   Create additional ROMs or Actions using any naming structure except "Install" or "Installer".
   One option is to number them sequentially and then append the version number:
-    1. Update v1.2.1
-    2. Update v1.3.5
-    3. Update v2.0
+  1. Update v1.2.1
+  2. Update v1.3.5
+  3. Update v2.0
   
   **Note: Updates currently only support exe files.**
