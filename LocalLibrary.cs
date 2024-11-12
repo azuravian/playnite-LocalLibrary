@@ -254,11 +254,17 @@ namespace LocalLibrary
                     gameActions = selectedGame.GameActions.ToList();
                     foreach (GameAction g in gameActions)
                     {
-                        if (g.Name == "Install")
+                        if (g.Name == "Install" || g.Name == "Installer")
                         {
-                            gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path.Replace(": ", " - ");
-                            gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments.Replace(": ", " - ");
+                            gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path;
+                            gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments;
+                            gameActions.Remove(g);
                         }
+                    }
+                    if (String.IsNullOrEmpty(gameImagePath) && gameActions.Count > 0) 
+                    {
+                        gameImagePath = API.Instance.ExpandGameVariables(selectedGame, gameActions[0]).Path;
+                        gameActions.Remove(gameActions[0]);
                     }
                 }
                 catch (Exception ex)
@@ -271,7 +277,20 @@ namespace LocalLibrary
                 try
                 {
                     gameRoms = selectedGame.Roms.ToList();
-                    gameImagePath = gameRoms[0].Path;
+                    foreach (GameRom gr in gameRoms)
+                    {
+                        if (gr.Name == "Install" || gr.Name == "Installer")
+                        {
+                            gameImagePath = gr.Path;
+                            gameRoms.Remove(gr);
+                        }
+                    }
+                    if (String.IsNullOrEmpty(gameImagePath) && gameRoms.Count > 0)
+                    {
+                        gameImagePath = gameRoms[0].Path;
+                        gameRoms.Remove(gameRoms[0]);
+                    }
+                    
                 }
                 catch (Exception ex)
                 {
@@ -483,7 +502,7 @@ namespace LocalLibrary
 
         public void Install_Extras(List<GameRom> extras)
         {
-            foreach (GameRom extra in extras.Skip(1))
+            foreach (GameRom extra in extras)
             {
                 int code = 0;
                 string exce = "";
@@ -531,7 +550,7 @@ namespace LocalLibrary
 
         public void Install_Extras(List<GameAction> extras)
         {
-            foreach (GameAction extra in extras.Skip(1))
+            foreach (GameAction extra in extras)
             {
                 int code = 0;
                 string exce = "";
@@ -693,8 +712,10 @@ namespace LocalLibrary
                     uninstall.Dispose();
                     return;
                 }
-
-                Delete_PlayActions(actions, selectedGame);
+                if (Settings.Settings.RemovePlay)
+                {
+                    Delete_PlayActions(actions, selectedGame);
+                }
                 selectedGame.InstallDirectory = null;
                 selectedGame.IsInstalled = false;
                 API.Instance.Database.Games.Update(selectedGame);

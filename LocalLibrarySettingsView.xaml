@@ -8,12 +8,17 @@
     
     <StackPanel Margin="20">
         <CheckBox IsChecked="{Binding Settings.UseActions}" Content="Use Actions instead of ROMS for storing Installer path." Margin="0,10,0,0"/>
-        <CheckBox IsChecked="{Binding Settings.RemovePlay}" Content="Remove Play Action after uninstalling game." Margin="0,10,0,0"/>
-        <DockPanel Margin="0,20">
-            <ComboBox x:Name="PluginsList" ItemsSource="{Binding Settings.PluginSources}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedSource}" MinWidth="150"/>
-            <Button x:Name="ApplyPluginId" Content="Apply PluginId" Margin="20,0,0,0" Click="Button_ApplyPluginId_Click" HorizontalAlignment="Right"/>
-            <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to new games automatically" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,50,0"/>
-        </DockPanel>
+        <!--<CheckBox IsChecked="{Binding Settings.RemovePlay}" Content="Remove Play Action after uninstalling game." Margin="0,10,0,0"/>-->
+        <GroupBox Margin="0,10,0,10" BorderThickness="0.5">
+            <GroupBox.Header>
+                Source
+            </GroupBox.Header>
+            <DockPanel Margin="0,20">
+                <ComboBox x:Name="PluginsList" ItemsSource="{Binding Settings.PluginSources}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedSource}" MinWidth="150"/>
+                <Button x:Name="ApplyPluginId" Content="Apply PluginId" Margin="20,0,0,0" Click="Button_ApplyPluginId_Click" HorizontalAlignment="Right"/>
+                <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to new games automatically" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,50,0"/>
+            </DockPanel>
+        </GroupBox>
         <GroupBox Margin="0,10,0,10" BorderThickness="0.5">
             <GroupBox.Header>
                 Unarchiver
