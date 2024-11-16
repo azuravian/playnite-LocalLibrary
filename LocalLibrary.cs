@@ -468,11 +468,11 @@ namespace LocalLibrary
                     return;
                 }
             }
-            if (Settings.Settings.UseActions && gameActions.Count > 1)
+            if (Settings.Settings.UseActions && gameActions.Count > 0)
             {
                 Install_Extras(gameActions, selectedGame, install);                
             }
-            else if (!Settings.Settings.UseActions && gameRoms.Count > 1)
+            else if (!Settings.Settings.UseActions && gameRoms.Count > 0)
             {
                 Install_Extras(gameRoms, selectedGame, install);
             }
