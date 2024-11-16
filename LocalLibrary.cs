@@ -470,11 +470,11 @@ namespace LocalLibrary
             }
             if (Settings.Settings.UseActions && gameActions.Count > 0)
             {
-                Install_Extras(gameActions, selectedGame, install);                
+                failed = Install_Extras(gameActions, selectedGame, install);
             }
             else if (!Settings.Settings.UseActions && gameRoms.Count > 0)
             {
-                Install_Extras(gameRoms, selectedGame, install);
+                failed = Install_Extras(gameRoms, selectedGame, install);
             }
             if (!failed)
             {
@@ -505,8 +505,9 @@ namespace LocalLibrary
             }
         }
 
-        public void Install_Extras(List<GameRom> extras, Game selectedGame, LocalInstallController install)
+        public bool Install_Extras(List<GameRom> extras, Game selectedGame, LocalInstallController install)
         {
+            var failed = false;
             foreach (GameRom extra in extras)
             {
                 int code = 0;
@@ -514,6 +515,7 @@ namespace LocalLibrary
                 string command = null;
                 string extraInstallArgs = null;
                 var extraPath = extra.Path;
+                
                 if (Path.GetFileName(extraPath).EndsWith(".exe"))
                 {
                     command = extraPath;
@@ -552,14 +554,18 @@ namespace LocalLibrary
                         selectedGame.IsInstalled = false;
                         API.Instance.Database.Games.Update(selectedGame);
                         install.Dispose();
-                        return;
+                        return true;
                     }
+                    failed = false;
                 }
+                failed = false;
             }
+            return failed;
         }
 
-        public void Install_Extras(List<GameAction> extras, Game selectedGame, LocalInstallController install)
+        public bool Install_Extras(List<GameAction> extras, Game selectedGame, LocalInstallController install)
         {
+            var failed = false;
             foreach (GameAction extra in extras)
             {
                 int code = 0;
@@ -605,10 +611,13 @@ namespace LocalLibrary
                         selectedGame.IsInstalled = false;
                         API.Instance.Database.Games.Update(selectedGame);
                         install.Dispose();
-                        return;
+                        return true;
                     }
+                    failed = false;
                 }
+                failed = false;
             }
+            return failed;
         }
 
         public void GameUninstaller(Game game, LocalUninstallController uninstall)
