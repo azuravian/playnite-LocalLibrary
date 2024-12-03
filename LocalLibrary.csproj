@@ -81,8 +81,8 @@
     <Compile Include="LocalLibrary.cs" />
     <Compile Include="NullToBooleanConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ListDialogBox.xaml.cs">
-      <DependentUpon>ListDialogBox.xaml</DependentUpon>
+    <Compile Include="SelectionDialog.xaml.cs">
+      <DependentUpon>SelectionDialog.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -90,7 +90,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="ListDialogBox.xaml">
+    <Page Include="SelectionDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -1,14 +1,15 @@
-﻿using System.Collections.ObjectModel;
+﻿using Playnite.SDK;
+using System.Collections.ObjectModel;
 using System.Windows;
 
 namespace LocalLibrary
 {
     public partial class SelectionDialog : Window
     {
-        public INamedItem SelectedItem { get; private set; }
+        public string SelectedItem { get; private set; }
         public bool IsCancelled { get; private set; } = true;
 
-        public SelectionDialog(ObservableCollection<INamedItem> items)
+        public SelectionDialog(ObservableCollection<string> items)
         {
             InitializeComponent();
             OptionsListBox.ItemsSource = items;
@@ -16,7 +17,7 @@ namespace LocalLibrary
 
         private void SelectButton_Click(object sender, RoutedEventArgs e)
         {
-            SelectedItem = OptionsListBox.SelectedItem as INamedItem;
+            SelectedItem = OptionsListBox.SelectedItem as string;
             IsCancelled = SelectedItem == null;
             DialogResult = true;
             Close();

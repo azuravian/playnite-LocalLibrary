@@ -115,20 +115,19 @@ namespace LocalLibrary
             return Tuple.Create(gameImagePath, gameInstallArgs, gameRoms);
         }
 
-        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions)
+        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, string source)
         {
+            Guid Id = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5");
             string gameInstaller = "";
-            List<string> validExt = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z" };
+            List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z" };
             Game newGame = new Game();
             newGame.Name = Path.GetFileName(dir);
+            newGame.Added = DateTime.Now;
+            newGame.PluginId = Id;
+            GameSource gameSource = API.Instance.Database.Sources.FirstOrDefault(a => a.Name == source);
+            Guid sourceid = gameSource.Id;
+            newGame.SourceId = sourceid;
             List<string> dirFiles = Directory.GetFiles(dir).ToList();
-            foreach (string file in dirFiles)
-            {
-                if (!validExt.Contains(Path.GetExtension(file)))
-                {
-                    continue;
-                }
-            }
             foreach (string file in dirFiles)
             {
                 if (Path.GetExtension(file) == ".exe")
@@ -139,7 +138,7 @@ namespace LocalLibrary
                         break;
                     }
                 }
-                else if (Path.GetExtension(file) == ".rar" || Path.GetExtension(file) == ".zip" || Path.GetExtension(file) == ".7z" || Path.GetExtension(file) == ".iso")
+                else if (validExt.Contains(Path.GetExtension(file)))
                 {
                     gameInstaller = file;
                 }
@@ -199,7 +198,6 @@ namespace LocalLibrary
                 $"Local Library - Finding Installers...",
                 true
                         );
-            GlobalProgressOptions globalProgressOptions = globalProgressOptions1;
             globalProgressOptions.IsIndeterminate = false;
             API.Instance.Dialogs.ActivateGlobalProgress((activateGlobalProgress) =>
             {
@@ -275,24 +273,25 @@ namespace LocalLibrary
                                 else
                                 {
                             posmatches.Sort();
-                            ObservableCollection<INamedItem> lmatches = new ObservableCollection<INamedItem>(
-                                posmatches.Select(match => new StringItem(match))
+                            ObservableCollection<string> lmatches = new ObservableCollection<string>(
+                                posmatches.Select(match => match)
                             );
 
                             Application.Current.Dispatcher.Invoke(() =>
                             {
                                 SelectionDialog dialog = new SelectionDialog(lmatches);
+                                dialog.SelectText.Text = $"Below are possible matches for {dirName}. Select a match from the list or choose 'None are correct'.";
                                 dialog.ShowDialog();
-                                if (!dialog.IsCancelled)
-                                {
-                                    gamesAdded = AddGame(gamesAdded, dir, useActions);
+                                if (dialog.IsCancelled)
+                                    {
+                                    gamesAdded = AddGame(gamesAdded, dir, useActions, source);
                                 }
                             });
                         }
                             }
                         else
                         {
-                            gamesAdded = AddGame(gamesAdded, dir, useActions);
+                            gamesAdded = AddGame(gamesAdded, dir, useActions, source);
                         }
                     }
 
