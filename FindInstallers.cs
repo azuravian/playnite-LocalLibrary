@@ -192,12 +192,12 @@ namespace LocalLibrary
                 }
 
                 string gameImagePath = useActions ? GetActions(game).Item1 : GetRoms(game).Item1;
-                    gameInstallDirs.Add(gameImagePath);
-                }
+                gameInstallDirs.Add(gameImagePath);
+            }
 
             GlobalProgressOptions globalProgressOptions = new GlobalProgressOptions(
-                            $"Local Library - Finding Installers...",
-                            true
+                $"Local Library - Finding Installers...",
+                true
                         );
             GlobalProgressOptions globalProgressOptions = globalProgressOptions1;
             globalProgressOptions.IsIndeterminate = false;
@@ -248,7 +248,7 @@ namespace LocalLibrary
                             continue;
                         }
 
-                            Levenshtein myLevenshtein = new Levenshtein();
+                        Levenshtein myLevenshtein = new Levenshtein();
                             List<string> posmatches = new List<string>();
                             gameInstallDirs.Sort();
                             foreach (string gameInstallDir in gameInstallDirs)
@@ -262,7 +262,7 @@ namespace LocalLibrary
                                 float percent = 1 - (Convert.ToSingle(ldistance) / Convert.ToSingle(Math.Max(gameInstallDir.Length, dir.Length)));
                                 percent = percent * 100;
                                 if (percent >= lpercent)
-                                {
+                        {
                                     posmatches.Add(gameInstallDir);
                                 }
                             }
@@ -270,32 +270,32 @@ namespace LocalLibrary
                             {
                                 if (posmatches.Count() == 1)
                                 {
-                                    continue;
-                                }
+                                continue;
+                            }
                                 else
                                 {
-                                    posmatches.Sort();
+                            posmatches.Sort();
                             ObservableCollection<INamedItem> lmatches = new ObservableCollection<INamedItem>(
                                 posmatches.Select(match => new StringItem(match))
                             );
 
                             Application.Current.Dispatcher.Invoke(() =>
-                                    {
-                                SelectionDialog dialog = new SelectionDialog(lmatches);
-                                        dialog.ShowDialog();
-                                        if (!dialog.IsCancelled)
-                                        {
-                                            gamesAdded = AddGame(gamesAdded, dir, useActions);
-                                        }
-                                    });
-                                }
-                            }
-                            else
                             {
-                                gamesAdded = AddGame(gamesAdded, dir, useActions);
-                            }
+                                SelectionDialog dialog = new SelectionDialog(lmatches);
+                                dialog.ShowDialog();
+                                if (!dialog.IsCancelled)
+                                {
+                                    gamesAdded = AddGame(gamesAdded, dir, useActions);
+                                }
+                            });
                         }
-                        
+                            }
+                        else
+                        {
+                            gamesAdded = AddGame(gamesAdded, dir, useActions);
+                        }
+                    }
+
                     API.Instance.Database.Games.Add(gamesAdded);
                     stopWatch.Stop();
                     TimeSpan ts = stopWatch.Elapsed;
