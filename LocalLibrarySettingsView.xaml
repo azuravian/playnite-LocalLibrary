@@ -5,51 +5,103 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignHeight="400" d:DesignWidth="600">
-    
-    <StackPanel Margin="20">
-        <CheckBox IsChecked="{Binding Settings.UseActions}" Content="Use Actions instead of ROMS for storing Installer path." Margin="0,10,0,0"/>
-        <!--<CheckBox IsChecked="{Binding Settings.RemovePlay}" Content="Remove Play Action after uninstalling game." Margin="0,10,0,0"/>-->
-        <GroupBox Margin="0,10,0,10" BorderThickness="0.5">
-            <GroupBox.Header>
-                Source
-            </GroupBox.Header>
-            <DockPanel Margin="0,20">
-                <ComboBox x:Name="PluginsList" ItemsSource="{Binding Settings.PluginSources}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedSource}" MinWidth="150"/>
-                <Button x:Name="ApplyPluginId" Content="Apply PluginId" Margin="20,0,0,0" Click="Button_ApplyPluginId_Click" HorizontalAlignment="Right"/>
-                <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to new games automatically" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,50,0"/>
-            </DockPanel>
-        </GroupBox>
-        <GroupBox Margin="0,10,0,10" BorderThickness="0.5">
-            <GroupBox.Header>
-                Unarchiver
-            </GroupBox.Header>
-            <StackPanel>
-                <GroupBox Margin="0,10,0,10" BorderThickness="0.5" VerticalAlignment="Bottom">
-                    <GroupBox.Header>
-                        Tool Selection
-                    </GroupBox.Header>
-                    <DockPanel>
-                        <RadioButton x:Name="RB7z" IsChecked="{Binding Settings.RB7z}" Margin="0,5,5,0"/>
-                        <Label Margin="0,0,5,0">7zip</Label>
-                        <RadioButton x:Name="RBRar" IsChecked="{Binding Settings.RBRar}" Margin="0,5,0,0"/>
-                        <Label Margin="0,0,5,0">WinRar</Label>
-                    </DockPanel>
-                </GroupBox>
-                <DockPanel Margin="0,10,0,20" VerticalAlignment="Bottom">
-                    <Label Content="Path" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                    <TextBox x:Name="ArchivePath" MinWidth="300" MaxWidth="450" VerticalAlignment="Center">
-                        <TextBox.Text>
-                            <Binding Path="Settings.ArchivePath" UpdateSourceTrigger="PropertyChanged"/>
-                        </TextBox.Text>
-                    </TextBox>
-                    <Button x:Name="ArchiveBrowse" Content="Browse" Margin="20,3,10,0" Click="Button_ArchiveBrowse_Click" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                    
+
+    <ScrollViewer>
+        <StackPanel Margin="20">
+            <GroupBox Margin="0,10,0,10" BorderThickness="0.5">
+                <GroupBox.Header>
+                    Source
+                </GroupBox.Header>
+                <DockPanel Margin="0,20">
+                    <ComboBox x:Name="SourceList" ItemsSource="{Binding Settings.PluginSources}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedSource}" MinWidth="150"/>
+                    <Button x:Name="ApplyPluginId" Content="Apply PluginId" Margin="20,0,0,0" Click="Button_ApplyPluginId_Click" HorizontalAlignment="Right"/>
+                    <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to new games automatically" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,50,0"/>
                 </DockPanel>
-            </StackPanel>
+            </GroupBox>
+            <GroupBox Margin="0,10,0,10" BorderThickness="0.5">
+                <GroupBox.Header>
+                    Installer Path(s)
+                </GroupBox.Header>
+                <Grid Margin="0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="0.6*"/>
+                        <ColumnDefinition Width="0.2*"/>
+                        <ColumnDefinition Width="0.2*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="75"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <CheckBox x:Name="cbActions" IsChecked="{Binding Settings.UseActions}" Content="Use Actions instead of ROMS for storing Installer path." Margin="0,0,0,10" Grid.Row="0" Grid.ColumnSpan="3"/>
+                    <CheckBox x:Name="cbPaths" IsChecked="{Binding Settings.UsePaths}" Content="On Library Update, import new game installers added to the paths below." Margin="0,0,0,10" Grid.Row="1" Grid.ColumnSpan="3"/>
+                    <!--<CheckBox IsChecked="{Binding Settings.RemovePlay}" Content="Remove Play Action after uninstalling game." Margin="0,10,0,0"/>-->
+                    <ListBox x:Name="PathsBox" ItemsSource="{Binding Settings.InstallPaths}" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3" 
+                            Margin="0,0,20,0" MinHeight="25" MinWidth="200" VerticalAlignment="Center" SelectionMode="Extended"/>
+                    <Button x:Name="AddPath" Content="Add Path" Margin="0,5,10,0" Command="{Binding AddPathCommand}" 
+                            Grid.Column="0" Grid.Row="3" HorizontalAlignment="Left" VerticalAlignment="Center" MinHeight="25"/>
+                    <Button x:Name="RemovePath" Content="Remove Path" Margin="0,5,10,0" Command="{Binding RemovePathCommand}" 
+                            Grid.Column="0" Grid.Row="3" VerticalAlignment="Center" MinHeight="25" HorizontalAlignment="Right"
+                            CommandParameter="{Binding SelectedItems, ElementName=PathsBox}"/>
+                    <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Center" Margin="5,5,5,5">
+                        <Label.Content>
+                            <AccessText TextWrapping="Wrap" Text="Select the number to represent the % match you want to consider a path excluded.  For example, if you select 94, any path found where you already have a game with an installer path that matches by 94% or higher would be excluded as long as it is the only path that meets those requirements."/>
+                        </Label.Content>
+
+                    </Label>
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0" Grid.Row="5">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Percentage" 
+                                   Margin="0,0,10,0" />
+                        <TextBox VerticalAlignment="Center"
+                                 IsReadOnly="True" MinWidth="35"
+                                 Margin="0,0,10,0"
+                                 Text="{Binding Settings.Levenshtein}" />
+                        <Slider IsSnapToTickEnabled="True" Minimum="81"
+                                x:Name="LevenSlider"
+                                Width="200"
+                                VerticalAlignment="Center"
+                                TickFrequency="1"
+                                Value="{Binding Settings.Levenshtein}"
+                                Maximum="100" />
+                    </StackPanel>
+                    <Button x:Name="AddGames" Content="Add Games" Margin="0,10,10,5" Click="Button_AddGames_Click" Grid.Column="2" Grid.Row="5" VerticalAlignment="Center" MinHeight="25" MinWidth="100" HorizontalAlignment="Left"/>
+                </Grid>
+            </GroupBox>
+            <GroupBox Margin="0,10,0,10" BorderThickness="0.5">
+                <GroupBox.Header>
+                    Unarchiver
+                </GroupBox.Header>
+                <StackPanel>
+                    <GroupBox Margin="0,10,0,10" BorderThickness="0.5" VerticalAlignment="Bottom">
+                        <GroupBox.Header>
+                            Tool Selection
+                        </GroupBox.Header>
+                        <DockPanel>
+                            <RadioButton x:Name="RB7z" IsChecked="{Binding Settings.RB7z}" Margin="0,5,5,0"/>
+                            <Label Margin="0,0,5,0">7zip</Label>
+                            <RadioButton x:Name="RBRar" IsChecked="{Binding Settings.RBRar}" Margin="0,5,0,0"/>
+                            <Label Margin="0,0,5,0">WinRar</Label>
+                        </DockPanel>
+                    </GroupBox>
+                    <DockPanel Margin="0,10,0,20" VerticalAlignment="Bottom">
+                        <Label Content="Path" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <TextBox x:Name="ArchivePath" MinWidth="300" MaxWidth="450" VerticalAlignment="Center">
+                            <TextBox.Text>
+                                <Binding Path="Settings.ArchivePath" UpdateSourceTrigger="PropertyChanged"/>
+                            </TextBox.Text>
+                        </TextBox>
+                        <Button x:Name="ArchiveBrowse" Content="Browse" Margin="20,3,10,0" Click="Button_ArchiveBrowse_Click" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                    
+                    </DockPanel>
+                </StackPanel>
             
-        </GroupBox>
-    </StackPanel>
-    
+            </GroupBox>
+        </StackPanel>
+    </ScrollViewer>
     
     
 </UserControl>
