@@ -183,26 +183,19 @@ namespace LocalLibrary
         {
             IEnumerable<Game> games = API.Instance.Database.Games;
             List<string> gameInstallDirs = new List<string>();
+
             foreach (Game game in games)
             {
                 if ((game.Source?.ToString() ?? "") != source)
                 {
                     continue;
                 }
-                if (useActions)
-                {
-                    Tuple<string, string, List<GameAction>> actionsTuple = GetActions(game);
-                    string gameImagePath = actionsTuple.Item1;
+
+                string gameImagePath = useActions ? GetActions(game).Item1 : GetRoms(game).Item1;
                     gameInstallDirs.Add(gameImagePath);
                 }
-                else
-                {
-                    Tuple<string, string, List<GameRom>> romsTuple = GetRoms(game);
-                    string gameImagePath = romsTuple.Item1;
-                    gameInstallDirs.Add(gameImagePath);
-                }
-            }
-            GlobalProgressOptions globalProgressOptions1 = new GlobalProgressOptions(
+
+            GlobalProgressOptions globalProgressOptions = new GlobalProgressOptions(
                             $"Local Library - Finding Installers...",
                             true
                         );
@@ -212,20 +205,17 @@ namespace LocalLibrary
             {
                 try
                 {
-                    List<string> dirsFinal = new List<string>();
-                    foreach (string path in installPaths)
-                    {
-                        if (Directory.Exists(path))
-                        {
-                            List<string> dirs = GetDirectories(path);
-                            dirsFinal.AddRange(dirs);
-                        }
-                    }
+                    List<string> dirsFinal = installPaths
+                        .Where(Directory.Exists)
+                        .SelectMany(GetDirectories)
+                        .ToList();
+
                     Stopwatch stopWatch = new Stopwatch();
                     stopWatch.Start();
-                    activateGlobalProgress.ProgressMaxValue = dirsFinal.Count();
-                    string CancelText = string.Empty;
+                    activateGlobalProgress.ProgressMaxValue = dirsFinal.Count;
+                    string cancelText = string.Empty;
                     List<Game> gamesAdded = new List<Game>();
+
                     foreach (string dir in dirsFinal)
                     {
                         activateGlobalProgress.CurrentProgressValue++;
@@ -241,23 +231,23 @@ namespace LocalLibrary
                         RegexOptions options = RegexOptions.IgnoreCase | RegexOptions.Compiled;
                         Regex reg = new Regex(pattern, options);
                         MatchCollection matches = reg.Matches(dir);
+
                         if (matches.Count == 1)
                         {
                             dirName = dir.Replace(matches[0].ToString(), "");
                         }
+
                         if (activateGlobalProgress.CancelToken.IsCancellationRequested)
                         {
-                            CancelText = " canceled";
+                            cancelText = " canceled";
                             break;
                         }
-                        //Test if directory already exists as rom in Playnite Database
-                        int result = gameInstallDirs.FindIndex(x => x == dir);
-                        if (result != -1)
+
+                        if (gameInstallDirs.Contains(dir))
                         {
                             continue;
                         }
-                        else
-                        {
+
                             Levenshtein myLevenshtein = new Levenshtein();
                             List<string> posmatches = new List<string>();
                             gameInstallDirs.Sort();
@@ -285,15 +275,13 @@ namespace LocalLibrary
                                 else
                                 {
                                     posmatches.Sort();
-                                    ObservableCollection<INamedItem> lmatches = new ObservableCollection<INamedItem>();
-                                    foreach (string match in posmatches)
+                            ObservableCollection<INamedItem> lmatches = new ObservableCollection<INamedItem>(
+                                posmatches.Select(match => new StringItem(match))
+                            );
+
+                            Application.Current.Dispatcher.Invoke(() =>
                                     {
-                                        lmatches.Add(new StringItem(match));
-                                    }
-                                    Application.Current.Dispatcher.Invoke((Action)delegate
-                                    {
-                                        ListDialogBox dialog = new ListDialogBox();
-                                        dialog.Items = lmatches;
+                                SelectionDialog dialog = new SelectionDialog(lmatches);
                                         dialog.ShowDialog();
                                         if (!dialog.IsCancelled)
                                         {
@@ -308,11 +296,10 @@ namespace LocalLibrary
                             }
                         }
                         
-                    }
                     API.Instance.Database.Games.Add(gamesAdded);
                     stopWatch.Stop();
                     TimeSpan ts = stopWatch.Elapsed;
-                    logger.Info($"Task FindInstallers(){CancelText} - {string.Format("{0:00}:{1:00}.{2:00}", ts.Minutes, ts.Seconds, ts.Milliseconds / 10)} for {activateGlobalProgress.CurrentProgressValue}/{(double)installPaths.Count()} items");
+                    logger.Info($"Task FindInstallers(){cancelText} - {ts:mm\\:ss\\.ff} for {activateGlobalProgress.CurrentProgressValue}/{dirsFinal.Count} items");
                 }
                 catch (Exception ex)
                 {
