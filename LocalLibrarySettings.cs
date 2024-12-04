@@ -28,6 +28,12 @@ namespace LocalLibrary
         private string _selectedsource = null;
         public string SelectedSource { get => _selectedsource; set => SetValue(ref _selectedsource, value); }
 
+        private List<Platform> _platforms = null;
+        public List<Platform> Platforms { get => _platforms; set => SetValue(ref _platforms, value); }
+
+        private string _selectedplatform = null;
+        public string SelectedPlatform { get => _selectedplatform; set => SetValue(ref _selectedplatform, value); }
+
         private bool _usepaths = false;
         public bool UsePaths { get => _usepaths; set => SetValue(ref _usepaths, value); }
 
@@ -120,6 +126,19 @@ namespace LocalLibrary
                 Sources.Sort();
 
                 return Sources;
+            }
+
+            Settings.Platforms = GetPlatforms();
+
+            List<Platform> GetPlatforms()
+            {
+                List<Platform> Platforms = new List<Platform>();
+                foreach (var platform in _plugin.PlayniteApi.Database.Platforms)
+                {
+                    Platforms.Add(platform);
+                }
+                Platforms.Sort();
+                return Platforms;
             }
         }
 

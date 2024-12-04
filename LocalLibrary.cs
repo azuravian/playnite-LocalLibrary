@@ -78,16 +78,11 @@ namespace LocalLibrary
                 var source = Settings.Settings.SelectedSource;
                 PluginIdUpdate(source);
             }
-            var response = MessageBox.Show("Would you like to update your library with any new games found in your Game Installers path(s)?", "Find New Games?", MessageBoxButton.YesNo);
-            if (response == MessageBoxResult.No)
-            {
-                return;
-            }
-            else
+            if (Settings.Settings.UsePaths)
             {
                 Finder addGames = new Finder();
                 var installPaths = Settings.Settings.InstallPaths;
-                addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource);
+                addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform);
             }
 
         }

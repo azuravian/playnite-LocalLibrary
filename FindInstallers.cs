@@ -115,18 +115,19 @@ namespace LocalLibrary
             return Tuple.Create(gameImagePath, gameInstallArgs, gameRoms);
         }
 
-        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, string source)
+        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, string source, string platform)
         {
-            Guid Id = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5");
+            Game newGame = new Game
+            {
+                Name = Path.GetFileName(dir),
+                Added = DateTime.Now,
+                PluginId = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5"),
+                SourceId = API.Instance.Database.Sources.FirstOrDefault(a => a.Name == source)?.Id ?? Guid.Empty,
+                PlatformIds = new List<Guid> { API.Instance.Database.Platforms.FirstOrDefault(a => a.Name == platform)?.Id ?? Guid.Empty }
+            };
+
             string gameInstaller = "";
             List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z" };
-            Game newGame = new Game();
-            newGame.Name = Path.GetFileName(dir);
-            newGame.Added = DateTime.Now;
-            newGame.PluginId = Id;
-            GameSource gameSource = API.Instance.Database.Sources.FirstOrDefault(a => a.Name == source);
-            Guid sourceid = gameSource.Id;
-            newGame.SourceId = sourceid;
             List<string> dirFiles = Directory.GetFiles(dir).ToList();
             foreach (string file in dirFiles)
             {
@@ -178,7 +179,7 @@ namespace LocalLibrary
             return gamesAdded;
         }
 
-        public void FindInstallers(List<string> installPaths, bool useActions, int lpercent, string source)
+        public void FindInstallers(List<string> installPaths, bool useActions, int lpercent, string source, string platform)
         {
             IEnumerable<Game> games = API.Instance.Database.Games;
             List<string> gameInstallDirs = new List<string>();
@@ -284,14 +285,14 @@ namespace LocalLibrary
                                 dialog.ShowDialog();
                                 if (dialog.IsCancelled)
                                     {
-                                    gamesAdded = AddGame(gamesAdded, dir, useActions, source);
+                                    gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform);
                                 }
                             });
                         }
                             }
                         else
                         {
-                            gamesAdded = AddGame(gamesAdded, dir, useActions, source);
+                            gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform);
                         }
                     }
 

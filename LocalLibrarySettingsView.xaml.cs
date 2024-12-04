@@ -52,7 +52,9 @@ namespace LocalLibrary
 
             string source = SourceList.SelectedItem.ToString();
 
-            addGames.FindInstallers(installPaths, useActions, levenValue, source);
+            string platform = PlatformList.SelectedItem.ToString();
+
+            addGames.FindInstallers(installPaths, useActions, levenValue, source, platform);
         }
 
         public void Button_ArchiveBrowse_Click(object sender, RoutedEventArgs e)
