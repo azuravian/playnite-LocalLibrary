@@ -12,4 +12,11 @@ Packages:
     PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/1.0.1/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_0_1.pext
     Changelog:
       - Fixes processing updates when only 1 update file is present
-    
+  - Version: 1.5.0
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2024-12-04
+    PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/1.5.0/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_5_0.pext
+    Changelog:
+      - New Feature - Added ability to scan folders to compare to your current local library games and add any that aren't already in your library.
+      - Fixes - Error in arguments for 7zip was causing archive functionality to fail
+      - Minor - Updated Settings UI
