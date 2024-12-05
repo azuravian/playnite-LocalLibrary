@@ -78,6 +78,13 @@ namespace LocalLibrary
                 var source = Settings.Settings.SelectedSource;
                 PluginIdUpdate(source);
             }
+            if (Settings.Settings.UsePaths)
+            {
+                Finder addGames = new Finder();
+                var installPaths = Settings.Settings.InstallPaths;
+                addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform);
+            }
+
         }
 
         public static void PluginIdUpdate(string source)
@@ -220,11 +227,11 @@ namespace LocalLibrary
             string extractpath = API.Instance.Dialogs.SelectFolder();
             if (Settings.Settings.RB7z)
             {
-                gameInstallArgs = " x -o" + extractpath + " " + gameImagePath;
+                gameInstallArgs = " x -o" + String.Concat("\"", extractpath, "\"") + " " + String.Concat("\"", gameImagePath, "\"");
             }
             else if (Settings.Settings.RBRar)
             {
-                gameInstallArgs = " x " + gameImagePath + " " + extractpath;
+                gameInstallArgs = " x " + String.Concat("\"", gameImagePath, "\"") + " -op" + String.Concat("\"", extractpath, "\"");
             }
             return gameInstallArgs;
         }
@@ -244,27 +251,23 @@ namespace LocalLibrary
             List<string> driveList2 = new List<string>();
             string command = null;
             string driveLetter = null;
-            string[] extensions = { "7z", "rar", "zip" };
+            string[] extensions = { ".7z", ".rar", ".zip" };
             bool archive = false;
 
             if (Settings.Settings.UseActions)
             {
                 try
                 {
-                    gameActions = selectedGame.GameActions.ToList();
-                    foreach (GameAction g in gameActions)
+                    Finder actionsFinder = new Finder();
+                    Tuple<string, string, List<GameAction>> actionsTuple = actionsFinder.GetActions(game);
+                    gameImagePath = actionsTuple.Item1;
+                    gameInstallArgs = actionsTuple.Item2;
+                    gameActions = actionsTuple.Item3;
+                    
+                    GameAction found = gameActions.FirstOrDefault(a => a.Path == gameImagePath);
+                    if (found != null)
                     {
-                        if (g.Name == "Install" || g.Name == "Installer")
-                        {
-                            gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path;
-                            gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments;
-                            gameActions.Remove(g);
-                        }
-                    }
-                    if (String.IsNullOrEmpty(gameImagePath) && gameActions.Count > 0) 
-                    {
-                        gameImagePath = API.Instance.ExpandGameVariables(selectedGame, gameActions[0]).Path;
-                        gameActions.Remove(gameActions[0]);
+                        gameActions.Remove(found);
                     }
                 }
                 catch (Exception ex)
@@ -276,21 +279,17 @@ namespace LocalLibrary
             {
                 try
                 {
-                    gameRoms = selectedGame.Roms.ToList();
-                    foreach (GameRom gr in gameRoms)
+                    Finder romsFinder = new Finder();
+                    Tuple<string, string, List<GameRom>> romsTuple = romsFinder.GetRoms(game);
+                    gameImagePath = romsTuple.Item1;
+                    gameInstallArgs = romsTuple.Item2;
+                    gameRoms = romsTuple.Item3;
+
+                    GameRom found = gameRoms.FirstOrDefault(a => a.Path == gameImagePath);
+                    if (found != null)
                     {
-                        if (gr.Name == "Install" || gr.Name == "Installer")
-                        {
-                            gameImagePath = gr.Path;
-                            gameRoms.Remove(gr);
-                        }
+                        gameRoms.Remove(found);
                     }
-                    if (String.IsNullOrEmpty(gameImagePath) && gameRoms.Count > 0)
-                    {
-                        gameImagePath = gameRoms[0].Path;
-                        gameRoms.Remove(gameRoms[0]);
-                    }
-                    
                 }
                 catch (Exception ex)
                 {
@@ -418,6 +417,10 @@ namespace LocalLibrary
                     String dpath = "";
                     p.StartInfo.FileName = command;
                     p.StartInfo.UseShellExecute = true;
+                    if (archive)
+                    {
+                        p.StartInfo.UseShellExecute = false;
+                    }
                     if (gameInstallArgs != null)
                     {
                         p.StartInfo.Arguments = gameInstallArgs;
@@ -519,6 +522,10 @@ namespace LocalLibrary
                 if (Path.GetFileName(extraPath).EndsWith(".exe"))
                 {
                     command = extraPath;
+                }
+                else 
+                { 
+                    continue; 
                 }
                 try
                 {

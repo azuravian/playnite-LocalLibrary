@@ -2,57 +2,93 @@
 using Playnite.SDK.Data;
 using Playnite.SDK.Models;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Controls;
 
 namespace LocalLibrary
 {
     public class LocalLibrarySettings : ObservableObject
     {
-        private bool useactions = false;
-        public bool UseActions { get => useactions; set => SetValue(ref useactions, value); }
+        private bool _useactions = false;
+        public bool UseActions { get => _useactions; set => SetValue(ref _useactions, value); }
 
-        private bool removeplay = true;
-        public bool RemovePlay { get => removeplay; set => SetValue(ref removeplay, value); }
+        private bool _removeplay = true;
+        public bool RemovePlay { get => _removeplay; set => SetValue(ref _removeplay, value); }
 
-        private List<GameSource> pluginsources = null;
-        public List<GameSource> PluginSources { get => pluginsources; set => SetValue(ref pluginsources, value); }
+        private List<GameSource> _pluginsources = null;
+        public List<GameSource> PluginSources { get => _pluginsources; set => SetValue(ref _pluginsources, value); }
 
-        private List<GameSource> includedsources = null;
-        public List<GameSource> IncludedSources { get => pluginsources; set => SetValue(ref includedsources, value); }
+        private List<GameSource> _includedsources = null;
+        public List<GameSource> IncludedSources { get => _pluginsources; set => SetValue(ref _includedsources, value); }
 
-        private ComboBox pluginslist = null;
-        public ComboBox PluginsList { get => pluginslist; set => SetValue(ref pluginslist, value); }
+        private ComboBox _sourcelist = null;
+        public ComboBox SourceList { get => _sourcelist; set => SetValue(ref _sourcelist, value); }
 
-        private string selectedsource = null;
-        public string SelectedSource { get => selectedsource; set => SetValue(ref selectedsource, value); }
+        private string _selectedsource = null;
+        public string SelectedSource { get => _selectedsource; set => SetValue(ref _selectedsource, value); }
 
-        private bool autoupdate = false;
-        public bool AutoUpdate { get => autoupdate; set => SetValue(ref autoupdate, value); }
+        private List<Platform> _platforms = null;
+        public List<Platform> Platforms { get => _platforms; set => SetValue(ref _platforms, value); }
 
-        private string archivepath = string.Empty;
-        public string ArchivePath { get => archivepath; set => SetValue(ref archivepath, value); }
+        private string _selectedplatform = null;
+        public string SelectedPlatform { get => _selectedplatform; set => SetValue(ref _selectedplatform, value); }
 
-        private bool rb7z = true;
-        public bool RB7z { get => rb7z; set => SetValue(ref rb7z, value); }
+        private bool _usepaths = false;
+        public bool UsePaths { get => _usepaths; set => SetValue(ref _usepaths, value); }
 
-        private bool rbrar = false;
-        public bool RBRar { get => rbrar; set => SetValue(ref rbrar, value); }
+        private ObservableCollection<string> _installpaths = null;
+        public ObservableCollection<string> InstallPaths { get => _installpaths; set => SetValue(ref _installpaths, value); }
+
+        private int _levenshtein = 100;
+        public int Levenshtein { get => _levenshtein; set => SetValue(ref _levenshtein, value); }
+
+        private bool _autoupdate = false;
+        public bool AutoUpdate { get => _autoupdate; set => SetValue(ref _autoupdate, value); }
+
+        private string _archivepath = string.Empty;
+        public string ArchivePath { get => _archivepath; set => SetValue(ref _archivepath, value); }
+
+        private bool _rb7z = true;
+        public bool RB7z { get => _rb7z; set => SetValue(ref _rb7z, value); }
+
+        private bool _rbrar = false;
+        public bool RBRar { get => _rbrar; set => SetValue(ref _rbrar, value); }
         // Playnite serializes settings object to a JSON object and saves it as text file.
         // If you want to exclude some property from being saved then use `JsonDontSerialize` ignore attribute.
     }
 
     public class LocalLibrarySettingsViewModel : ObservableObject, ISettings
     {
-        private readonly LocalLibrary plugin;
+        private readonly LocalLibrary _plugin;
         private LocalLibrarySettings EditingClone { get; set; }
 
-        private LocalLibrarySettings settings;
+        private LocalLibrarySettings _settings;
+
+        public RelayCommand AddPathCommand
+            => new RelayCommand(() =>
+            {
+                string value = API.Instance.Dialogs.SelectFolder();
+
+                Settings.InstallPaths.AddMissing(value);
+                Settings.InstallPaths = new ObservableCollection<string>(Settings.InstallPaths.OrderBy(x => x));
+            });
+
+        public RelayCommand<IList<object>> RemovePathCommand
+            => new RelayCommand<IList<object>>((items) =>
+            {
+                foreach (string item in items.ToList().Cast<string>())
+                {
+                    Settings.InstallPaths.Remove(item);
+                }
+            }, (items) => items?.Any() ?? false);
+
         public LocalLibrarySettings Settings
         {
-            get => settings;
+            get => _settings;
             set
             {
-                settings = value;
+                _settings = value;
                 OnPropertyChanged();
             }
         }
@@ -60,20 +96,17 @@ namespace LocalLibrary
         public LocalLibrarySettingsViewModel(LocalLibrary plugin)
         {
             // Injecting your plugin instance is required for Save/Load method because Playnite saves data to a location based on what plugin requested the operation.
-            this.plugin = plugin;
+            _plugin = plugin;
 
             // Load saved settings.
             var savedSettings = plugin.LoadPluginSettings<LocalLibrarySettings>();
 
             // LoadPluginSettings returns null if not saved data is available.
-            if (savedSettings != null)
-            {
-                Settings = savedSettings;
-            }
-            else
-            {
-                Settings = new LocalLibrarySettings();
-            }
+            Settings = savedSettings ?? new LocalLibrarySettings();
+
+            Settings.InstallPaths = Settings.InstallPaths is null
+                ? new ObservableCollection<string>()
+                : new ObservableCollection<string>(Settings.InstallPaths.OrderBy(x => x).ToList());
         }
 
         public void BeginEdit()
@@ -86,13 +119,26 @@ namespace LocalLibrary
             List<GameSource> GetSources()
             {
                 List<GameSource> Sources = new List<GameSource>();
-                foreach (var source in plugin.PlayniteApi.Database.Sources)
+                foreach (var source in _plugin.PlayniteApi.Database.Sources)
                 {
                     Sources.Add(source);
                 }
                 Sources.Sort();
 
                 return Sources;
+            }
+
+            Settings.Platforms = GetPlatforms();
+
+            List<Platform> GetPlatforms()
+            {
+                List<Platform> Platforms = new List<Platform>();
+                foreach (var platform in _plugin.PlayniteApi.Database.Platforms)
+                {
+                    Platforms.Add(platform);
+                }
+                Platforms.Sort();
+                return Platforms;
             }
         }
 
@@ -107,7 +153,7 @@ namespace LocalLibrary
         {
             // Code executed when user decides to confirm changes made since BeginEdit was called.
             // This method should save settings made to Option1 and Option2.
-            plugin.SavePluginSettings(Settings);
+            _plugin.SavePluginSettings(Settings);
         }
 
         public bool VerifySettings(out List<string> errors)
