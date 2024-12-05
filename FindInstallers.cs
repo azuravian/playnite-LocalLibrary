@@ -72,11 +72,6 @@ namespace LocalLibrary
             {
                 gameImagePath = API.Instance.ExpandGameVariables(game, game.InstallDirectory);
             }
-            List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z" };
-            if (exts.Contains(Path.GetExtension(gameImagePath)) || File.Exists(gameImagePath))
-            {
-                gameImagePath = Path.GetDirectoryName(gameImagePath);
-            }
             return Tuple.Create(gameImagePath, gameInstallArgs, gameActions);
         }
 
@@ -106,11 +101,6 @@ namespace LocalLibrary
             if (String.IsNullOrEmpty(gameImagePath))
             {
                 gameImagePath = API.Instance.ExpandGameVariables(game, game.InstallDirectory);
-            }
-            List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z" };
-            if (exts.Contains(Path.GetExtension(gameImagePath)) || File.Exists(gameImagePath))
-            {
-                gameImagePath = Path.GetDirectoryName(gameImagePath);
             }
             return Tuple.Create(gameImagePath, gameInstallArgs, gameRoms);
         }
@@ -192,6 +182,11 @@ namespace LocalLibrary
                 }
 
                 string gameImagePath = useActions ? GetActions(game).Item1 : GetRoms(game).Item1;
+                List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z" };
+                if (exts.Contains(Path.GetExtension(gameImagePath)) || File.Exists(gameImagePath))
+                {
+                    gameImagePath = Path.GetDirectoryName(gameImagePath);
+                }
                 gameInstallDirs.Add(gameImagePath);
             }
 
