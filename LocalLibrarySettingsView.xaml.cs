@@ -49,9 +49,13 @@ namespace LocalLibrary
                 MessageBox.Show("Please select a source.");
                 return;
             }
-
             string source = SourceList.SelectedItem.ToString();
 
+            if (PlatformList.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a platform.");
+                return;
+            }
             string platform = PlatformList.SelectedItem.ToString();
 
             addGames.FindInstallers(installPaths, useActions, levenValue, source, platform);
