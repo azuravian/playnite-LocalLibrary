@@ -70,6 +70,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MergedItem.cs" />
     <Compile Include="FindInstallers.cs" />
     <Compile Include="Levenshtein.cs" />
     <Compile Include="LocalLibrarySettings.cs" />

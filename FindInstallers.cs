@@ -5,6 +5,7 @@ using Playnite.SDK.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -105,11 +106,36 @@ namespace LocalLibrary
             return Tuple.Create(gameImagePath, gameInstallArgs, gameRoms);
         }
 
-        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, string source, string platform)
+        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, string source, string platform, List<MergedItem> ignorelist)
         {
+            string gamename = Path.GetFileName(dir);
+            if (ignorelist != null)
+            {
+                foreach (MergedItem item in ignorelist)
+                {
+                    var type = item.Source;
+                    var value = item.Value;
+
+                    if (type == "String")
+                    {
+                        if (gamename.Contains(value))
+                        {
+                            gamename = gamename.Replace(value, "");
+                        }
+                    }
+                    else if (type == "Regex")
+                    {
+                        if (Regex.IsMatch(gamename, value))
+                        {
+                            gamename = Regex.Replace(gamename, value, "");
+                        }
+                    }
+                    gamename = Regex.Replace(gamename, @"\s+", " ").Trim();
+                }
+            }
             Game newGame = new Game
             {
-                Name = Path.GetFileName(dir),
+                Name = gamename,
                 Added = DateTime.Now,
                 PluginId = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5"),
                 SourceId = API.Instance.Database.Sources.FirstOrDefault(a => a.Name == source)?.Id ?? Guid.Empty,
@@ -169,7 +195,7 @@ namespace LocalLibrary
             return gamesAdded;
         }
 
-        public void FindInstallers(List<string> installPaths, bool useActions, int lpercent, string source, string platform)
+        public void FindInstallers(List<string> installPaths, bool useActions, int lpercent, string source, string platform, List<MergedItem> ignorelist)
         {
             IEnumerable<Game> games = API.Instance.Database.Games;
             List<string> gameInstallDirs = new List<string>();
@@ -280,14 +306,14 @@ namespace LocalLibrary
                                 dialog.ShowDialog();
                                 if (dialog.IsCancelled)
                                     {
-                                    gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform);
+                                    gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform, ignorelist);
                                 }
                             });
                         }
                             }
                         else
                         {
-                            gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform);
+                            gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform, ignorelist);
                         }
                     }
 
