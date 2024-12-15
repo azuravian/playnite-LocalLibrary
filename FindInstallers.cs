@@ -47,13 +47,13 @@ namespace LocalLibrary
             return new DirectoryInfo(path).Name;
         }
 
-        public Tuple<string, string, List<GameAction>> GetActions(Game game) 
+        public Tuple<string, string, List<GameAction>> GetActions(Game game)
         {
             string gameImagePath = null;
             string gameInstallArgs = null;
             List<GameAction> gameActions = new List<GameAction>();
             if (game.GameActions != null)
-            { 
+            {
                 gameActions = game.GameActions.ToList();
                 foreach (GameAction g in gameActions)
                 {
@@ -160,7 +160,7 @@ namespace LocalLibrary
                     gameInstaller = file;
                 }
             }
-            if ( gameInstaller == "" )
+            if (gameInstaller == "")
             {
                 return gamesAdded;
             }
@@ -245,7 +245,7 @@ namespace LocalLibrary
                         {
                             string doubled = Regex.Replace(p, @"\\", @"\\");
                             regPaths.Add(doubled);
-                        }   
+                        }
                         string pattern = @"(" + String.Join("|", regPaths.ToArray()) + @")([^\\]*)\\*";
                         pattern.Replace(@"\", @"\\");
                         RegexOptions options = RegexOptions.IgnoreCase | RegexOptions.Compiled;
@@ -269,48 +269,48 @@ namespace LocalLibrary
                         }
 
                         Levenshtein myLevenshtein = new Levenshtein();
-                            List<string> posmatches = new List<string>();
-                            gameInstallDirs.Sort();
-                            foreach (string gameInstallDir in gameInstallDirs)
-                            {
-                                if (gameInstallDir == null)
-                                {
-                                    continue;
-                                }
-                                string gameInstallDirName = GetDeepestDirectory(gameInstallDir);
-                                int ldistance = myLevenshtein.Distance(dirName, gameInstallDirName);
-                                float percent = 1 - (Convert.ToSingle(ldistance) / Convert.ToSingle(Math.Max(gameInstallDir.Length, dir.Length)));
-                                percent = percent * 100;
-                                if (percent >= lpercent)
+                        List<string> posmatches = new List<string>();
+                        gameInstallDirs.Sort();
+                        foreach (string gameInstallDir in gameInstallDirs)
                         {
-                                    posmatches.Add(gameInstallDir);
-                                }
-                            }
-                            if (posmatches.Count() > 0)
+                            if (gameInstallDir == null)
                             {
-                                if (posmatches.Count() == 1)
-                                {
                                 continue;
                             }
-                                else
-                                {
-                            posmatches.Sort();
-                            ObservableCollection<string> lmatches = new ObservableCollection<string>(
-                                posmatches.Select(match => match)
-                            );
-
-                            Application.Current.Dispatcher.Invoke(() =>
+                            string gameInstallDirName = GetDeepestDirectory(gameInstallDir);
+                            int ldistance = myLevenshtein.Distance(dirName, gameInstallDirName);
+                            float percent = 1 - (Convert.ToSingle(ldistance) / Convert.ToSingle(Math.Max(gameInstallDir.Length, dir.Length)));
+                            percent = percent * 100;
+                            if (percent >= lpercent)
                             {
-                                SelectionDialog dialog = new SelectionDialog(lmatches);
-                                dialog.SelectText.Text = $"Below are possible matches for {dirName}. Select a match from the list or choose 'None are correct'.";
-                                dialog.ShowDialog();
-                                if (dialog.IsCancelled)
-                                    {
-                                    gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform, ignorelist);
-                                }
-                            });
-                        }
+                                posmatches.Add(gameInstallDir);
                             }
+                        }
+                        if (posmatches.Count() > 0)
+                        {
+                            if (posmatches.Count() == 1)
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                posmatches.Sort();
+                                ObservableCollection<string> lmatches = new ObservableCollection<string>(
+                                    posmatches.Select(match => match)
+                                );
+
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    SelectionDialog dialog = new SelectionDialog(lmatches);
+                                    dialog.SelectText.Text = $"Below are possible matches for {dirName}. Select a match from the list or choose 'None are correct'.";
+                                    dialog.ShowDialog();
+                                    if (dialog.IsCancelled)
+                                    {
+                                        gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform, ignorelist);
+                                    }
+                                });
+                            }
+                        }
                         else
                         {
                             gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform, ignorelist);

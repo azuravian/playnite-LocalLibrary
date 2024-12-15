@@ -1,13 +1,10 @@
 ﻿using Playnite.SDK;
 using Playnite.SDK.Data;
 using Playnite.SDK.Models;
-using Playnite.SDK.Plugins;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
-using System.Runtime;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Windows.Controls;
 
 namespace LocalLibrary
@@ -162,7 +159,7 @@ namespace LocalLibrary
                 settings.StringList.AddMissing(value);
                 NewStringText = string.Empty;
             });
-        
+
         public RelayCommand<IList<object>> RemoveStringCommand
             => new RelayCommand<IList<object>>((items) =>
             {
@@ -228,7 +225,7 @@ namespace LocalLibrary
                 return Platforms;
             }
 
-            
+
         }
 
         public void CancelEdit()

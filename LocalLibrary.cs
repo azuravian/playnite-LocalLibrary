@@ -280,7 +280,7 @@ namespace LocalLibrary
                     gameImagePath = actionsTuple.Item1;
                     gameInstallArgs = actionsTuple.Item2;
                     gameActions = actionsTuple.Item3;
-                    
+
                     GameAction found = gameActions.FirstOrDefault(a => a.Path == gameImagePath);
                     if (found != null)
                     {
@@ -535,14 +535,14 @@ namespace LocalLibrary
                 string command = null;
                 string extraInstallArgs = null;
                 var extraPath = extra.Path;
-                
+
                 if (Path.GetFileName(extraPath).EndsWith(".exe"))
                 {
                     command = extraPath;
                 }
-                else 
-                { 
-                    continue; 
+                else
+                {
+                    continue;
                 }
                 try
                 {
