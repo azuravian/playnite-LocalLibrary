@@ -20,3 +20,10 @@ Packages:
       - New Feature - Added ability to scan folders to compare to your current local library games and add any that aren't already in your library.
       - Fixes - Error in arguments for 7zip was causing archive functionality to fail
       - Minor - Updated Settings UI
+  - Version: 1.6.0
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2024-12-06
+    PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/1.6.0/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_6_0.pext
+    Changelog:
+      - New Feature - Add standard strings or regex patterns to remove from folder names when naming games
+      - Fixes - Error caused by Platform not being set
