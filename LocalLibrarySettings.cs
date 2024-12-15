@@ -3,6 +3,7 @@ using Playnite.SDK.Data;
 using Playnite.SDK.Models;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Linq;
 using System.Windows.Controls;
 
@@ -40,6 +41,18 @@ namespace LocalLibrary
         private ObservableCollection<string> _installpaths = null;
         public ObservableCollection<string> InstallPaths { get => _installpaths; set => SetValue(ref _installpaths, value); }
 
+        private ObservableCollection<string> _regexlist = null;
+        public ObservableCollection<string> RegexList { get => _regexlist; set => SetValue(ref _regexlist, value); }
+
+        private ObservableCollection<string> _stringlist = null;
+        public ObservableCollection<string> StringList { get => _stringlist; set => SetValue(ref _stringlist, value); }
+
+        private string _selectedregex = null;
+        public string SelectedRegex { get => _selectedregex; set => SetValue(ref _selectedregex, value); }
+
+        private string _selectedstring = null;
+        public string SelectedString { get => _selectedstring; set => SetValue(ref _selectedstring, value); }
+
         private int _levenshtein = 100;
         public int Levenshtein { get => _levenshtein; set => SetValue(ref _levenshtein, value); }
 
@@ -60,18 +73,49 @@ namespace LocalLibrary
 
     public class LocalLibrarySettingsViewModel : ObservableObject, ISettings
     {
-        private readonly LocalLibrary _plugin;
+        private readonly LocalLibrary plugin;
         private LocalLibrarySettings EditingClone { get; set; }
 
-        private LocalLibrarySettings _settings;
+        private LocalLibrarySettings settings;
+        public LocalLibrarySettings Settings
+        {
+            get => settings;
+            set
+            {
+                settings = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _newRegexText;
+        public string NewRegexText
+        {
+            get => _newRegexText;
+            set
+            {
+                _newRegexText = value;
+                OnPropertyChanged(nameof(NewRegexText));
+            }
+        }
+
+        private string _newStringText;
+        public string NewStringText
+        {
+            get => _newStringText;
+            set
+            {
+                _newStringText = value;
+                OnPropertyChanged(nameof(NewStringText));
+            }
+        }
 
         public RelayCommand AddPathCommand
             => new RelayCommand(() =>
             {
                 string value = API.Instance.Dialogs.SelectFolder();
 
-                Settings.InstallPaths.AddMissing(value);
-                Settings.InstallPaths = new ObservableCollection<string>(Settings.InstallPaths.OrderBy(x => x));
+                settings.InstallPaths.AddMissing(value);
+                settings.InstallPaths = new ObservableCollection<string>(settings.InstallPaths.OrderBy(x => x));
             });
 
         public RelayCommand<IList<object>> RemovePathCommand
@@ -79,24 +123,56 @@ namespace LocalLibrary
             {
                 foreach (string item in items.ToList().Cast<string>())
                 {
-                    Settings.InstallPaths.Remove(item);
+                    settings.InstallPaths.Remove(item);
                 }
             }, (items) => items?.Any() ?? false);
 
-        public LocalLibrarySettings Settings
-        {
-            get => _settings;
-            set
+        public RelayCommand AddRegexCommand
+            => new RelayCommand(() =>
             {
-                _settings = value;
-                OnPropertyChanged();
-            }
-        }
+                string value = NewRegexText;
+                if (string.IsNullOrWhiteSpace(NewRegexText))
+                {
+                    return;
+                }
+                settings.RegexList.AddMissing(value);
+                NewRegexText = string.Empty;
+            });
+
+        public RelayCommand<IList<object>> RemoveRegexCommand
+            => new RelayCommand<IList<object>>((items) =>
+            {
+                foreach (string item in items.ToList().Cast<string>())
+                {
+                    settings.RegexList.Remove(item);
+                }
+            }, (items) => items?.Any() ?? false);
+
+        public RelayCommand AddStringCommand
+            => new RelayCommand(() =>
+            {
+                string value = NewStringText;
+                if (string.IsNullOrWhiteSpace(NewStringText))
+                {
+                    return;
+                }
+                settings.StringList.AddMissing(value);
+                NewStringText = string.Empty;
+            });
+
+        public RelayCommand<IList<object>> RemoveStringCommand
+            => new RelayCommand<IList<object>>((items) =>
+            {
+                foreach (string item in items.ToList().Cast<string>())
+                {
+                    settings.StringList.Remove(item);
+                }
+            }, (items) => items?.Any() ?? false);
 
         public LocalLibrarySettingsViewModel(LocalLibrary plugin)
         {
             // Injecting your plugin instance is required for Save/Load method because Playnite saves data to a location based on what plugin requested the operation.
-            _plugin = plugin;
+            this.plugin = plugin;
 
             // Load saved settings.
             var savedSettings = plugin.LoadPluginSettings<LocalLibrarySettings>();
@@ -107,6 +183,14 @@ namespace LocalLibrary
             Settings.InstallPaths = Settings.InstallPaths is null
                 ? new ObservableCollection<string>()
                 : new ObservableCollection<string>(Settings.InstallPaths.OrderBy(x => x).ToList());
+
+            Settings.RegexList = Settings.RegexList is null
+                ? new ObservableCollection<string>()
+                : new ObservableCollection<string>(Settings.RegexList.OrderBy(x => x).ToList());
+
+            Settings.StringList = Settings.StringList is null
+                ? new ObservableCollection<string>()
+                : new ObservableCollection<string>(Settings.StringList.OrderBy(x => x).ToList());
         }
 
         public void BeginEdit()
@@ -119,7 +203,7 @@ namespace LocalLibrary
             List<GameSource> GetSources()
             {
                 List<GameSource> Sources = new List<GameSource>();
-                foreach (var source in _plugin.PlayniteApi.Database.Sources)
+                foreach (var source in plugin.PlayniteApi.Database.Sources)
                 {
                     Sources.Add(source);
                 }
@@ -133,13 +217,15 @@ namespace LocalLibrary
             List<Platform> GetPlatforms()
             {
                 List<Platform> Platforms = new List<Platform>();
-                foreach (var platform in _plugin.PlayniteApi.Database.Platforms)
+                foreach (var platform in plugin.PlayniteApi.Database.Platforms)
                 {
                     Platforms.Add(platform);
                 }
                 Platforms.Sort();
                 return Platforms;
             }
+
+
         }
 
         public void CancelEdit()
@@ -153,7 +239,7 @@ namespace LocalLibrary
         {
             // Code executed when user decides to confirm changes made since BeginEdit was called.
             // This method should save settings made to Option1 and Option2.
-            _plugin.SavePluginSettings(Settings);
+            plugin.SavePluginSettings(Settings);
         }
 
         public bool VerifySettings(out List<string> errors)

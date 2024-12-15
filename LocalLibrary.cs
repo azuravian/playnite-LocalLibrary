@@ -78,13 +78,30 @@ namespace LocalLibrary
                 var source = Settings.Settings.SelectedSource;
                 PluginIdUpdate(source);
             }
+            //if (Settings.Settings.UsePaths)
+            //{
+            //    Finder addGames = new Finder();
+            //    var installPaths = Settings.Settings.InstallPaths;
+            //    var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
+            //        .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
+            //        .ToList();
+            //    addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform, ignorelist);
+            //}
+
+        }
+
+        public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
+        {
             if (Settings.Settings.UsePaths)
             {
                 Finder addGames = new Finder();
                 var installPaths = Settings.Settings.InstallPaths;
-                addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform);
+                var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
+                    .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
+                    .ToList();
+                addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform, ignorelist);
             }
-
+            return new List<GameMetadata>();
         }
 
         public static void PluginIdUpdate(string source)
@@ -263,7 +280,7 @@ namespace LocalLibrary
                     gameImagePath = actionsTuple.Item1;
                     gameInstallArgs = actionsTuple.Item2;
                     gameActions = actionsTuple.Item3;
-                    
+
                     GameAction found = gameActions.FirstOrDefault(a => a.Path == gameImagePath);
                     if (found != null)
                     {
@@ -518,14 +535,14 @@ namespace LocalLibrary
                 string command = null;
                 string extraInstallArgs = null;
                 var extraPath = extra.Path;
-                
+
                 if (Path.GetFileName(extraPath).EndsWith(".exe"))
                 {
                     command = extraPath;
                 }
-                else 
-                { 
-                    continue; 
+                else
+                {
+                    continue;
                 }
                 try
                 {
