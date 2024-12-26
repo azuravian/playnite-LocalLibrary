@@ -37,6 +37,7 @@ namespace LocalLibrary
             Settings = new LocalLibrarySettingsViewModel(this);
             Properties = new LibraryPluginProperties
             {
+                HasCustomizedGameImport = true,
                 HasSettings = true
             };
         }
@@ -90,8 +91,9 @@ namespace LocalLibrary
 
         }
 
-        public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
+        public override IEnumerable<Game> ImportGames(LibraryImportGamesArgs args)
         {
+            List<Game> addedGames = new List<Game>();
             if (Settings.Settings.UsePaths)
             {
                 Finder addGames = new Finder();
@@ -99,9 +101,9 @@ namespace LocalLibrary
                 var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
                     .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
                     .ToList();
-                addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform, ignorelist);
+                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform, ignorelist);
             }
-            return new List<GameMetadata>();
+            return addedGames;
         }
 
         public static void PluginIdUpdate(string source)
@@ -135,7 +137,7 @@ namespace LocalLibrary
                             break;
                         }
 
-                        if (game.Source != null && game.Source.ToString() == source && game.PluginId != Id)
+                        if (game.Source != null && game.Source.ToString() == source && game.PluginId == Guid.Empty)
                         {
                             game.PluginId = Id;
                             API.Instance.Database.Games.Update(game);
@@ -153,9 +155,6 @@ namespace LocalLibrary
                     logger.Error(ex, ex.ToString());
                 }
             }, globalProgressOptions);
-
-
-
         }
 
         //Prompt user for installation location and create Play action

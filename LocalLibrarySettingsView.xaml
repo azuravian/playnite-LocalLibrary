@@ -27,7 +27,7 @@
                     <ComboBox x:Name="SourceList" ItemsSource="{Binding Settings.PluginSources}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedSource}" MinWidth="150" Grid.Column="1" Grid.Row="0" Margin="10"/>
                     <TextBlock Text="Platform" HorizontalAlignment="Center" Grid.Row="1" Grid.Column="0" Margin="10" VerticalAlignment="Center"/>
                     <ComboBox x:Name="PlatformList" ItemsSource="{Binding Settings.Platforms}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedPlatform}" MinWidth="150" Grid.Column="1" Grid.Row="1" Margin="10"/>
-                    <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to new games automatically" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2"/>
+                    <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to games in the selected Source automatically" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2"/>
                     <Button x:Name="ApplyPluginId" Content="Apply PluginId" Margin="10" Click="Button_ApplyPluginId_Click" HorizontalAlignment="Left" Grid.Column="0" Grid.Row="3"/>
                 </Grid>
             </TabItem>

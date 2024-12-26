@@ -1,6 +1,7 @@
 ﻿using Playnite.SDK;
 using Playnite.SDK.Data;
 using Playnite.SDK.Models;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -205,7 +206,7 @@ namespace LocalLibrary
                 List<GameSource> Sources = new List<GameSource>();
                 foreach (var source in plugin.PlayniteApi.Database.Sources)
                 {
-                    Sources.Add(source);
+                    Sources.Add(source);                    
                 }
                 Sources.Sort();
 
