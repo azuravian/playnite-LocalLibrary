@@ -195,7 +195,7 @@ namespace LocalLibrary
             return gamesAdded;
         }
 
-        public void FindInstallers(List<string> installPaths, bool useActions, int lpercent, string source, string platform, List<MergedItem> ignorelist)
+        public List<Game> FindInstallers(List<string> installPaths, bool useActions, int lpercent, string source, string platform, List<MergedItem> ignorelist)
         {
             IEnumerable<Game> games = API.Instance.Database.Games;
             List<string> gameInstallDirs = new List<string>();
@@ -219,8 +219,9 @@ namespace LocalLibrary
             GlobalProgressOptions globalProgressOptions = new GlobalProgressOptions(
                 $"Local Library - Finding Installers...",
                 true
-                        );
+            );
             globalProgressOptions.IsIndeterminate = false;
+            List<Game> gamesAdded = new List<Game>();
             API.Instance.Dialogs.ActivateGlobalProgress((activateGlobalProgress) =>
             {
                 try
@@ -234,7 +235,6 @@ namespace LocalLibrary
                     stopWatch.Start();
                     activateGlobalProgress.ProgressMaxValue = dirsFinal.Count;
                     string cancelText = string.Empty;
-                    List<Game> gamesAdded = new List<Game>();
 
                     foreach (string dir in dirsFinal)
                     {
@@ -327,6 +327,7 @@ namespace LocalLibrary
                     logger.Error(ex, ex.ToString());
                 }
             }, globalProgressOptions);
+            return gamesAdded;
         }
     }
 }
