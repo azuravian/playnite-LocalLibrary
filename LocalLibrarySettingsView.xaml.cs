@@ -1,5 +1,6 @@
 ﻿using Playnite.SDK;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
 using System.Windows;
@@ -16,8 +17,8 @@ namespace LocalLibrary
 
         public void Button_ApplyPluginId_Click(object sender, RoutedEventArgs e)
         {
-            string source = SourceList.SelectedItem.ToString();
-            LocalLibrary.PluginIdUpdate(source);
+            ObservableCollection<GameSourceOption> sources = SelectedSourcesList.Items.Cast<GameSourceOption>().ToObservable();
+            LocalLibrary.PluginIdUpdate(sources);
         }
 
         public void Button_AddGames_Click(object sender, RoutedEventArgs e)
@@ -44,12 +45,12 @@ namespace LocalLibrary
                 return;
             }
 
-            if (SourceList.SelectedItem == null)
+            if (SelectedSourcesList.Items.Count == 0)
             {
-                MessageBox.Show("Please select a source.");
+                MessageBox.Show("Please make sure you add a Source to the Selected Sources list.");
                 return;
             }
-            string source = SourceList.SelectedItem.ToString();
+            ObservableCollection<GameSourceOption> sources = SelectedSourcesList.Items.Cast<GameSourceOption>().ToObservable();
 
             if (PlatformList.SelectedItem == null)
             {
@@ -61,7 +62,7 @@ namespace LocalLibrary
             var ignorelist = RegexList.Items.Cast<string>().Select(item => new MergedItem { Value = item, Source = "Regex" })
                 .Concat(StringList.Items.Cast<string>().Select(item => new MergedItem { Value = item, Source = "String" }))
                 .ToList();
-            addGames.FindInstallers(installPaths, useActions, levenValue, source, platform, ignorelist);
+            addGames.FindInstallers(installPaths, useActions, levenValue, sources, platform, ignorelist, cbFindUpdates.IsChecked ?? false);
         }
 
         public void Button_ArchiveBrowse_Click(object sender, RoutedEventArgs e)

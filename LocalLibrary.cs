@@ -4,6 +4,7 @@ using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
@@ -76,19 +77,9 @@ namespace LocalLibrary
         {
             if (Settings.Settings.AutoUpdate == true)
             {
-                var source = Settings.Settings.SelectedSource;
-                PluginIdUpdate(source);
+                ObservableCollection<GameSourceOption> sources = Settings.Settings.SelectedSources;
+                PluginIdUpdate(sources);
             }
-            //if (Settings.Settings.UsePaths)
-            //{
-            //    Finder addGames = new Finder();
-            //    var installPaths = Settings.Settings.InstallPaths;
-            //    var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
-            //        .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
-            //        .ToList();
-            //    addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform, ignorelist);
-            //}
-
         }
 
         public override IEnumerable<Game> ImportGames(LibraryImportGamesArgs args)
@@ -101,12 +92,12 @@ namespace LocalLibrary
                 var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
                     .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
                     .ToList();
-                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSource, Settings.Settings.SelectedPlatform, ignorelist);
+                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSources, Settings.Settings.SelectedPlatform, ignorelist, Settings.Settings.FindUpdates);
             }
             return addedGames;
         }
 
-        public static void PluginIdUpdate(string source)
+        public static void PluginIdUpdate(ObservableCollection<GameSourceOption> sources)
         {
             Guid Id = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5");
             IEnumerable<Game> games = API.Instance.Database.Games;
@@ -137,7 +128,7 @@ namespace LocalLibrary
                             break;
                         }
 
-                        if (game.Source != null && game.Source.ToString() == source && game.PluginId == Guid.Empty)
+                        if (game.PluginId == Guid.Empty && game.Source != null && sources.Any(source => source.Name == game.Source.ToString()))
                         {
                             game.PluginId = Id;
                             API.Instance.Database.Games.Update(game);
