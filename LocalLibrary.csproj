@@ -70,6 +70,8 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Converters.cs" />
+    <Compile Include="GameSourceOption.cs" />
     <Compile Include="MergedItem.cs" />
     <Compile Include="FindInstallers.cs" />
     <Compile Include="Levenshtein.cs" />
@@ -80,6 +82,7 @@
     <Compile Include="LocalGameController.cs" />
     <Compile Include="LocalLibrary.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReportItem.cs" />
     <Compile Include="SelectionDialog.xaml.cs">
       <DependentUpon>SelectionDialog.xaml</DependentUpon>
     </Compile>

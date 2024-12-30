@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
-using System.Windows.Controls;
 
 namespace LocalLibrary
 {
@@ -15,44 +14,35 @@ namespace LocalLibrary
         private bool _useactions = false;
         public bool UseActions { get => _useactions; set => SetValue(ref _useactions, value); }
 
-        private bool _removeplay = true;
+        private bool _removeplay = false;
         public bool RemovePlay { get => _removeplay; set => SetValue(ref _removeplay, value); }
 
-        private List<GameSource> _pluginsources = null;
-        public List<GameSource> PluginSources { get => _pluginsources; set => SetValue(ref _pluginsources, value); }
+        private bool _findupdates = false;
+        public bool FindUpdates { get => _findupdates; set => SetValue(ref _findupdates, value); }
 
-        private List<GameSource> _includedsources = null;
-        public List<GameSource> IncludedSources { get => _pluginsources; set => SetValue(ref _includedsources, value); }
+        private ObservableCollection<GameSource> _pluginsources = new ObservableCollection<GameSource>();
+        [DontSerialize] public ObservableCollection<GameSource> PluginSources { get => _pluginsources; set => SetValue(ref _pluginsources, value); }
 
-        private ComboBox _sourcelist = null;
-        public ComboBox SourceList { get => _sourcelist; set => SetValue(ref _sourcelist, value); }
+        private ObservableCollection<GameSourceOption> _selectedsources = new ObservableCollection<GameSourceOption>();
+        public ObservableCollection<GameSourceOption> SelectedSources { get => _selectedsources; set => SetValue(ref _selectedsources, value); }
 
-        private string _selectedsource = null;
-        public string SelectedSource { get => _selectedsource; set => SetValue(ref _selectedsource, value); }
+        private ObservableCollection<Platform> _platforms = new ObservableCollection<Platform>();
+        [DontSerialize] public ObservableCollection<Platform> Platforms { get => _platforms; set => SetValue(ref _platforms, value); }
 
-        private List<Platform> _platforms = null;
-        public List<Platform> Platforms { get => _platforms; set => SetValue(ref _platforms, value); }
-
-        private string _selectedplatform = null;
+        private string _selectedplatform = String.Empty;
         public string SelectedPlatform { get => _selectedplatform; set => SetValue(ref _selectedplatform, value); }
 
         private bool _usepaths = false;
         public bool UsePaths { get => _usepaths; set => SetValue(ref _usepaths, value); }
 
-        private ObservableCollection<string> _installpaths = null;
+        private ObservableCollection<string> _installpaths = new ObservableCollection<string>();
         public ObservableCollection<string> InstallPaths { get => _installpaths; set => SetValue(ref _installpaths, value); }
 
-        private ObservableCollection<string> _regexlist = null;
+        private ObservableCollection<string> _regexlist = new ObservableCollection<string>();
         public ObservableCollection<string> RegexList { get => _regexlist; set => SetValue(ref _regexlist, value); }
 
-        private ObservableCollection<string> _stringlist = null;
+        private ObservableCollection<string> _stringlist = new ObservableCollection<string>();
         public ObservableCollection<string> StringList { get => _stringlist; set => SetValue(ref _stringlist, value); }
-
-        private string _selectedregex = null;
-        public string SelectedRegex { get => _selectedregex; set => SetValue(ref _selectedregex, value); }
-
-        private string _selectedstring = null;
-        public string SelectedString { get => _selectedstring; set => SetValue(ref _selectedstring, value); }
 
         private int _levenshtein = 100;
         public int Levenshtein { get => _levenshtein; set => SetValue(ref _levenshtein, value); }
@@ -68,6 +58,13 @@ namespace LocalLibrary
 
         private bool _rbrar = false;
         public bool RBRar { get => _rbrar; set => SetValue(ref _rbrar, value); }
+
+        private string _selectedregex = String.Empty;
+        [DontSerialize] public string SelectedRegex { get => _selectedregex; set => SetValue(ref _selectedregex, value); }
+        
+        private string _selectedstring = String.Empty;
+        [DontSerialize] public string SelectedString { get => _selectedstring; set => SetValue(ref _selectedstring, value); }
+
         // Playnite serializes settings object to a JSON object and saves it as text file.
         // If you want to exclude some property from being saved then use `JsonDontSerialize` ignore attribute.
     }
@@ -110,6 +107,67 @@ namespace LocalLibrary
             }
         }
 
+        public RelayCommand<IList<object>> AddSourceCommand
+            => new RelayCommand<IList<object>>((items) =>
+            {
+                var itemsToProcess = items.OfType<GameSource>().ToList();
+                
+                foreach (GameSource item in itemsToProcess)
+                {
+                    var newOption = new GameSourceOption(item.Id, item.Name, false);
+                    settings.SelectedSources.AddMissing(newOption);
+                    settings.PluginSources.Remove(item);
+                }
+            }, (items) => items?.Any() ?? false);
+
+        public RelayCommand<IList<object>> RemoveSourceCommand
+            => new RelayCommand<IList<object>>((items) =>
+            {
+                var itemsToProcess = items.OfType<GameSourceOption>().ToList();
+
+                foreach (GameSourceOption item in itemsToProcess)
+                {
+                    settings.SelectedSources.Remove(item);
+                    GameSource source = API.Instance.Database.Sources.FirstOrDefault(a => a.Id == item.Id);
+                    settings.PluginSources.AddMissing(source);
+                }
+            }, (items) => items?.Any() ?? false);
+
+        public RelayCommand CreateSourceCommand
+            => new RelayCommand(() =>
+            {
+                string sourcename = string.Empty;
+                var selection = API.Instance.Dialogs.SelectString("New Source Name:", "New Source", "");
+                if (selection.Result)
+                {
+                    sourcename = selection.SelectedString;
+                }
+                else
+                {
+                    API.Instance.Dialogs.ShowMessage("No source name entered.");
+                    return;
+                }
+                GameSource source = new GameSource(sourcename);
+                API.Instance.Database.Sources.Add(source);
+                var newOption = new GameSourceOption(source.Id, source.Name, false);
+                settings.SelectedSources.AddMissing(newOption);
+            });
+
+        public RelayCommand<GameSourceOption> SetPrimaryCommand
+            => new RelayCommand<GameSourceOption>((selectedSource) =>
+            {
+                // Clear previous primary settings
+                foreach (var source in settings.SelectedSources)
+                {
+                    source.IsPrimary = false;
+                }
+
+                if (selectedSource != null)
+                {
+                    selectedSource.IsPrimary = true;
+                }
+            });
+
         public RelayCommand AddPathCommand
             => new RelayCommand(() =>
             {
@@ -122,7 +180,9 @@ namespace LocalLibrary
         public RelayCommand<IList<object>> RemovePathCommand
             => new RelayCommand<IList<object>>((items) =>
             {
-                foreach (string item in items.ToList().Cast<string>())
+                var itemsToProcess = items.OfType<string>().ToList();
+
+                foreach (string item in itemsToProcess)
                 {
                     settings.InstallPaths.Remove(item);
                 }
@@ -143,7 +203,9 @@ namespace LocalLibrary
         public RelayCommand<IList<object>> RemoveRegexCommand
             => new RelayCommand<IList<object>>((items) =>
             {
-                foreach (string item in items.ToList().Cast<string>())
+                var itemsToProcess = items.OfType<string>().ToList();
+
+                foreach (string item in itemsToProcess)
                 {
                     settings.RegexList.Remove(item);
                 }
@@ -164,7 +226,9 @@ namespace LocalLibrary
         public RelayCommand<IList<object>> RemoveStringCommand
             => new RelayCommand<IList<object>>((items) =>
             {
-                foreach (string item in items.ToList().Cast<string>())
+                var itemsToProcess = items.OfType<string>().ToList();
+
+                foreach (string item in itemsToProcess)
                 {
                     settings.StringList.Remove(item);
                 }
@@ -192,6 +256,18 @@ namespace LocalLibrary
             Settings.StringList = Settings.StringList is null
                 ? new ObservableCollection<string>()
                 : new ObservableCollection<string>(Settings.StringList.OrderBy(x => x).ToList());
+
+            Settings.SelectedSources = Settings.SelectedSources is null
+                ? new ObservableCollection<GameSourceOption>()
+                : new ObservableCollection<GameSourceOption>(Settings.SelectedSources.OrderBy(x => x.Name).ToList());
+
+            Settings.PluginSources = Settings.PluginSources is null
+                ? new ObservableCollection<GameSource>()
+                : new ObservableCollection<GameSource>(Settings.PluginSources.OrderBy(x => x.Name).ToList());
+
+            Settings.Platforms = Settings.Platforms is null
+                ? new ObservableCollection<Platform>()
+                : new ObservableCollection<Platform>(Settings.Platforms.OrderBy(x => x.Name).ToList());
         }
 
         public void BeginEdit()
@@ -201,28 +277,31 @@ namespace LocalLibrary
 
             Settings.PluginSources = GetSources();
 
-            List<GameSource> GetSources()
+            ObservableCollection<GameSource> GetSources()
             {
-                List<GameSource> Sources = new List<GameSource>();
+                var avoidsources = new[] { "Steam", "Gog", "Amazon", "Battle.Net", "Epic", "Legacy Games", "Playstation", "Xbox",
+                                            "Xbox Game Pass", "Ubisoft Connect", "EA app", "Humble", "itch.io", "Google Play Games" };
+                ObservableCollection<GameSource> Sources = new ObservableCollection<GameSource>();
                 foreach (var source in plugin.PlayniteApi.Database.Sources)
                 {
-                    Sources.Add(source);                    
+                    if ( avoidsources.Contains(source.Name, StringComparer.OrdinalIgnoreCase) )
+                    {
+                        continue;
+                    }
+                    Sources.Add(source);
                 }
-                Sources.Sort();
-
                 return Sources;
             }
 
             Settings.Platforms = GetPlatforms();
 
-            List<Platform> GetPlatforms()
+            ObservableCollection<Platform> GetPlatforms()
             {
-                List<Platform> Platforms = new List<Platform>();
+                ObservableCollection<Platform> Platforms = new ObservableCollection<Platform>();
                 foreach (var platform in plugin.PlayniteApi.Database.Platforms)
                 {
                     Platforms.Add(platform);
                 }
-                Platforms.Sort();
                 return Platforms;
             }
 

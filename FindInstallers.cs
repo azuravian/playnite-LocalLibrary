@@ -106,7 +106,7 @@ namespace LocalLibrary
             return Tuple.Create(gameImagePath, gameInstallArgs, gameRoms);
         }
 
-        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, string source, string platform, List<MergedItem> ignorelist)
+        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, Guid source, string platform, List<MergedItem> ignorelist)
         {
             string gamename = Path.GetFileName(dir);
             if (ignorelist != null)
@@ -138,7 +138,7 @@ namespace LocalLibrary
                 Name = gamename,
                 Added = DateTime.Now,
                 PluginId = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5"),
-                SourceId = API.Instance.Database.Sources.FirstOrDefault(a => a.Name == source)?.Id ?? Guid.Empty,
+                SourceId = source,
                 PlatformIds = new List<Guid> { API.Instance.Database.Platforms.FirstOrDefault(a => a.Name == platform)?.Id ?? Guid.Empty }
             };
 
@@ -195,25 +195,148 @@ namespace LocalLibrary
             return gamesAdded;
         }
 
-        public List<Game> FindInstallers(List<string> installPaths, bool useActions, int lpercent, string source, string platform, List<MergedItem> ignorelist)
+        public int FindGameUpdates(Game game, string dir, bool useActions)
         {
+            var gameUpdates = new List<Dictionary<string, string>>();
+            var updatesPath = Path.Combine(dir, "Updates");
+            if (!Directory.Exists(updatesPath))
+            {
+                return 0;
+            }
+
+            // Get all top-level files and directories
+            var entries = Directory.GetFileSystemEntries(updatesPath).OrderBy(Path.GetFileName);
+
+            // Filter out invalid actions
+            if (useActions)
+            {
+                gameUpdates = game.GameActions
+                    .Where(action => File.Exists(action.Path) || Directory.Exists(action.Path))
+                    .Select(action => new Dictionary<string, string>
+                    {
+                        { "Path", action.Path }, 
+                        { "Name", action.Name } 
+                    })
+                    .ToList();
+            }
+            else
+            {
+                gameUpdates = game.Roms
+                    .Where(rom => File.Exists(rom.Path) || Directory.Exists(rom.Path))
+                    .Select(rom => new Dictionary<string, string>
+                    {
+                        { "Path", rom.Path },
+                        { "Name", rom.Name }
+                    })
+                    .ToList();
+            }
+
+            var validExecutables = new[] { "Patch.exe", "Setup.exe", "Install.exe" };
+
+            foreach (var entry in entries)
+            {
+                string entryName = string.Empty;
+
+                if (game.GameActions?.Any(action => action.Path == entry) == true
+                                || game.Roms?.Any(rom => rom.Path == entry) == true)
+                {
+                    continue;
+                }
+
+                if (File.Exists(entry))
+                {
+                    var newentry = new Dictionary<string, string> { { "Path", entry }, { "Name", "" } };
+                    gameUpdates.Add(newentry);
+                }
+                else if (Directory.Exists(entry))
+                {
+                    var validExecutable = Directory.GetFiles(entry, "*.exe", SearchOption.AllDirectories)
+                        .FirstOrDefault(file => validExecutables.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase));
+
+                    if (validExecutable != null)
+                    {
+                        var newentry = new Dictionary<string, string> { { "Path", validExecutable }, { "Name", "" } };
+                        gameUpdates.Add(newentry);
+                    }
+                }
+            }
+            // Sort and rename updates
+            var seenPaths = new HashSet<string>();
+            gameUpdates = gameUpdates
+                .Where(update => seenPaths.Add(update["Path"].ToString()))  // Adds path if not already in HashSet
+                .ToList();
+
+
+            gameUpdates = gameUpdates
+                .OrderBy(update => update["Name"].StartsWith("install", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .ThenBy(update => update["Path"])
+                .ToList();
+
+            for (int i = 1; i < gameUpdates.Count; i++)
+            {
+                gameUpdates[i]["Name"] = $"Update {i}";
+            }
+
+            if (useActions)
+            {
+                var gameActions = gameUpdates.Select(update => new GameAction
+                {
+                    Name = update["Name"],
+                    Path = update["Path"],
+                    Type = GameActionType.File,
+                    TrackingMode = TrackingMode.Default,
+                    IsPlayAction = false
+                });
+                game.GameActions = new ObservableCollection<GameAction>(gameActions);
+            }
+            else
+            {
+                var gameRoms = gameUpdates.Select(update => new GameRom
+                {
+                    Name = update["Name"],
+                    Path = update["Path"]
+                });
+                game.Roms = new ObservableCollection<GameRom>(gameRoms);
+            }
+            return gameUpdates.Count - 1;
+        }
+
+        public List<Game> FindInstallers(List<string> installPaths, bool useActions, int lpercent, ObservableCollection<GameSourceOption> sources, string platform, List<MergedItem> ignorelist, bool findupdates)
+        {
+            List<ReportItem> reportItems = new List<ReportItem>();
+            int totalupdates = 0;
+            Guid primarysourceid = sources.FirstOrDefault(a => a.IsPrimary)?.Id ?? Guid.Empty;
+            if (primarysourceid == Guid.Empty)
+            {
+                API.Instance.Dialogs.ShowMessage("You must designate a Source as the primary source in order to find and add new games. Open the Local Library addon settings and select a primary source.", "No Primary Source selected");
+            }
             IEnumerable<Game> games = API.Instance.Database.Games;
             List<string> gameInstallDirs = new List<string>();
 
             foreach (Game game in games)
             {
-                if ((game.Source?.ToString() ?? "") != source)
+                if (!sources.Any(source => source.Name == (game.Source?.ToString() ?? "")))
                 {
                     continue;
                 }
 
                 string gameImagePath = useActions ? GetActions(game).Item1 : GetRoms(game).Item1;
+                if (gameImagePath == null)
+                {
+                    continue;
+                }
                 List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z" };
                 if (exts.Contains(Path.GetExtension(gameImagePath)) || File.Exists(gameImagePath))
                 {
                     gameImagePath = Path.GetDirectoryName(gameImagePath);
                 }
                 gameInstallDirs.Add(gameImagePath);
+                if (findupdates)
+                {
+                    int updatescount = FindGameUpdates(game, gameImagePath, useActions);
+                    totalupdates += updatescount;
+                    reportItems.Add(new ReportItem(game.Name, false, updatescount > 0, updatescount));
+                }
             }
 
             GlobalProgressOptions globalProgressOptions = new GlobalProgressOptions(
@@ -306,15 +429,31 @@ namespace LocalLibrary
                                     dialog.ShowDialog();
                                     if (dialog.IsCancelled)
                                     {
-                                        gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform, ignorelist);
+                                        gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, ignorelist);
                                     }
                                 });
                             }
                         }
                         else
                         {
-                            gamesAdded = AddGame(gamesAdded, dir, useActions, source, platform, ignorelist);
+                            gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, ignorelist);
                         }
+                    }
+
+                    int totalNewUpdates = 0;
+                    foreach (Game game in gamesAdded)
+                    {
+                        int updatescount = 
+                        FindGameUpdates(
+                            game,
+                            useActions && game.GameActions.Any()
+                            ? Path.GetDirectoryName(game.GameActions.First().Path)
+                            : game.Roms.Any() 
+                                ? Path.GetDirectoryName(game.Roms.First().Path)
+                                : string.Empty,
+                            useActions);
+                        totalNewUpdates += updatescount;
+                        reportItems.Add(new ReportItem(game.Name, true, updatescount > 0, updatescount));
                     }
 
                     API.Instance.Database.Games.Add(gamesAdded);
