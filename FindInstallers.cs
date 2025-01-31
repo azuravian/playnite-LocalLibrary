@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Forms.VisualStyles;
 using API = Playnite.SDK.API;
 
 namespace LocalLibrary
@@ -106,9 +107,38 @@ namespace LocalLibrary
             return Tuple.Create(gameImagePath, gameInstallArgs, gameRoms);
         }
 
+        public string GetMainInstaller(string dir, bool useActions)
+        {
+            string gameInstaller = "";
+            List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z" };
+            List<string> dirFiles = Directory.GetFiles(dir).ToList();
+            foreach (string file in dirFiles)
+            {
+                if (Path.GetExtension(file) == ".exe")
+                {
+                    string filename = Path.GetFileNameWithoutExtension(file).ToLower();
+                    if (filename == "setup" || filename == "install" || filename.Contains("setup") || filename.Contains("install"))
+                    {
+                        gameInstaller = file;
+                        break;
+                    }
+                }
+                else if (validExt.Contains(Path.GetExtension(file)))
+                {
+                    gameInstaller = file;
+                }
+            }
+            return gameInstaller;
+        }
+
         public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, Guid source, string platform, List<MergedItem> ignorelist)
         {
             string gamename = Path.GetFileName(dir);
+            string gameInstaller = GetMainInstaller(dir, useActions);
+            if (gameInstaller == "")
+            {
+                return gamesAdded;
+            }
             if (ignorelist != null)
             {
                 foreach (MergedItem item in ignorelist)
@@ -133,6 +163,46 @@ namespace LocalLibrary
                     gamename = Regex.Replace(gamename, @"\s+", " ").Trim();
                 }
             }
+
+            IEnumerable<Game> games = API.Instance.Database.Games
+                    ?.Where(game => game != null && game.Source != null && game.Source.Id == source)
+                    ?? Enumerable.Empty<Game>();
+            var matchingGame = games.FirstOrDefault(game => game.Name.Replace(": ", " - ") == gamename);
+            if (matchingGame != null)
+            {
+                if (useActions)
+                {
+                    GameAction action = new GameAction();
+
+                    try
+                    {
+                        action.Type = GameActionType.File;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex.ToString());
+                    }
+                    action.Path = gameInstaller;
+                    action.Name = "Install";
+                    action.TrackingMode = TrackingMode.Default;
+                    action.IsPlayAction = false;
+                    matchingGame.GameActions = new ObservableCollection<GameAction>();
+                    matchingGame.GameActions.AddMissing(action);
+                    API.Instance.Database.Games.Update(matchingGame);
+                }
+                else
+                {
+                    GameRom installRom = new GameRom();
+                    installRom.Name = "Install";
+                    installRom.Path = gameInstaller;
+                    matchingGame.Roms = new ObservableCollection<GameRom>();
+                    matchingGame.Roms.AddMissing(installRom);
+                    API.Instance.Database.Games.Update(matchingGame);
+                }
+
+                return gamesAdded;
+            }
+
             Game newGame = new Game
             {
                 Name = gamename,
@@ -141,30 +211,8 @@ namespace LocalLibrary
                 SourceId = source,
                 PlatformIds = new List<Guid> { API.Instance.Database.Platforms.FirstOrDefault(a => a.Name == platform)?.Id ?? Guid.Empty }
             };
-
-            string gameInstaller = "";
-            List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z" };
-            List<string> dirFiles = Directory.GetFiles(dir).ToList();
-            foreach (string file in dirFiles)
-            {
-                if (Path.GetExtension(file) == ".exe")
-                {
-                    if (Path.GetFileNameWithoutExtension(file).ToLower() == "setup" || Path.GetFileNameWithoutExtension(file).ToLower() == "install")
-                    {
-                        gameInstaller = file;
-                        break;
-                    }
-                }
-                else if (validExt.Contains(Path.GetExtension(file)))
-                {
-                    gameInstaller = file;
-                }
-            }
-            if (gameInstaller == "")
-            {
-                return gamesAdded;
-            }
-            else if (useActions)
+            
+            if (useActions)
             {
                 GameAction action = new GameAction();
 
@@ -231,7 +279,7 @@ namespace LocalLibrary
                     .ToList();
             }
 
-            var validExecutables = new[] { "Patch.exe", "Setup.exe", "Install.exe" };
+            var preferredExecutables = new[] { "Patch.exe", "Setup.exe", "Install.exe" };
 
             foreach (var entry in entries)
             {
@@ -251,7 +299,12 @@ namespace LocalLibrary
                 else if (Directory.Exists(entry))
                 {
                     var validExecutable = Directory.GetFiles(entry, "*.exe", SearchOption.AllDirectories)
-                        .FirstOrDefault(file => validExecutables.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase));
+                        .FirstOrDefault(file => preferredExecutables.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase));
+
+                    if (validExecutable == null)
+                    {
+                        validExecutable = Directory.GetFiles(entry, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
+                    }
 
                     if (validExecutable != null)
                     {
@@ -304,6 +357,7 @@ namespace LocalLibrary
         public List<Game> FindInstallers(List<string> installPaths, bool useActions, int lpercent, ObservableCollection<GameSourceOption> sources, string platform, List<MergedItem> ignorelist, bool findupdates)
         {
             List<ReportItem> reportItems = new List<ReportItem>();
+            List<Game> NoItems = new List<Game>();
             int totalupdates = 0;
             Guid primarysourceid = sources.FirstOrDefault(a => a.IsPrimary)?.Id ?? Guid.Empty;
             if (primarysourceid == Guid.Empty)
@@ -321,8 +375,9 @@ namespace LocalLibrary
                 }
 
                 string gameImagePath = useActions ? GetActions(game).Item1 : GetRoms(game).Item1;
-                if (gameImagePath == null)
+                if (String.IsNullOrEmpty(gameImagePath))
                 {
+                    NoItems.Add(game);
                     continue;
                 }
                 List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z" };
@@ -396,7 +451,7 @@ namespace LocalLibrary
                         gameInstallDirs.Sort();
                         foreach (string gameInstallDir in gameInstallDirs)
                         {
-                            if (gameInstallDir == null)
+                            if (String.IsNullOrEmpty(gameInstallDir))
                             {
                                 continue;
                             }
@@ -437,6 +492,15 @@ namespace LocalLibrary
                         else
                         {
                             gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, ignorelist);
+                        }
+                    }
+
+
+                    foreach (Game game in NoItems)
+                    {
+                        if (!gameInstallDirs.Any(dir => dir.Contains(game.Name)))
+                        {
+                            continue;
                         }
                     }
 
