@@ -258,10 +258,12 @@ namespace LocalLibrary
             List<string> driveList2 = new List<string>();
             string command = null;
             string driveLetter = null;
-            string[] extensions = { ".7z", ".rar", ".zip" };
+            string[] archives = { ".7z", ".rar", ".zip" };
+            string[] executables = { ".exe", ".msi" };
             bool archive = false;
+            bool actions = Settings.Settings.UseActions;
 
-            if (Settings.Settings.UseActions)
+            if (actions)
             {
                 try
                 {
@@ -343,11 +345,11 @@ namespace LocalLibrary
                         }
                     }
                 }
-                else if (Path.GetFileName(gameImagePath).EndsWith(".exe"))
+                else if (executables.Any(x => gameImagePath.EndsWith(x)))
                 {
                     command = gameImagePath;
                 }
-                else if (extensions.Any(x => gameImagePath.EndsWith(x)))
+                else if (archives.Any(x => gameImagePath.EndsWith(x)))
                 {
                     archive = true;
                     command = Settings.Settings.ArchivePath;
@@ -374,14 +376,15 @@ namespace LocalLibrary
                     }
                     else
                     {
-                        String[] Files = Directory.GetFiles(gameImagePath, "*.exe");
+                        List<string> Files = Directory.GetFiles(gameImagePath, "*.*")
+                                                  .Where(file => file.ToLower().EndsWith(".exe") || file.ToLower().EndsWith(".msi")).ToList();
 
                         if (Files.Count() > 1)
                         {
-                            MessageBoxResult result = MessageBox.Show("More than 1 .exe in folder.  Would you like to select the appropriate .exe?", "Too many programs", MessageBoxButton.YesNo);
+                            MessageBoxResult result = MessageBox.Show("More than 1 possible installer in folder.  Would you like to select the appropriate installer?", "Too many executables", MessageBoxButton.YesNo);
                             if (result == MessageBoxResult.Yes)
                             {
-                                command = API.Instance.Dialogs.SelectFile("Installer|*.exe");
+                                command = API.Instance.Dialogs.SelectFile("All Executables|*.exe;*.msi|" + "Installer|*.exe|Installer|*.msi");
                             }
                             else
                             {
@@ -390,7 +393,7 @@ namespace LocalLibrary
                         }
                         else if (Files.Count().ToString() == "0")
                         {
-                            API.Instance.Dialogs.ShowErrorMessage("No executables found in folder.  Check Rom Path.", "No Executables.");
+                            API.Instance.Dialogs.ShowErrorMessage("No executables found in folder.  Check  Path.", "No Executables.");
                             return;
                         }
                         else
@@ -422,16 +425,27 @@ namespace LocalLibrary
                 using (Process p = new Process())
                 {
                     String dpath = "";
-                    p.StartInfo.FileName = command;
                     p.StartInfo.UseShellExecute = true;
+
                     if (archive)
                     {
                         p.StartInfo.UseShellExecute = false;
                     }
-                    if (gameInstallArgs != null)
+
+                    if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
                     {
-                        p.StartInfo.Arguments = gameInstallArgs;
+                        p.StartInfo.FileName = "msiexec.exe";
+                        p.StartInfo.Arguments = $"/i \"{command}\" {gameInstallArgs}";
                     }
+                    else
+                    {
+                        p.StartInfo.FileName = command;
+                        if (gameInstallArgs != null)
+                        {
+                            p.StartInfo.Arguments = gameInstallArgs;
+                        }
+                    }
+
                     if (driveLetter != null)
                     {
                         dpath = driveLetter;
@@ -444,6 +458,7 @@ namespace LocalLibrary
                     {
                         dpath = gameImagePath;
                     }
+
                     p.StartInfo.WorkingDirectory = dpath;
                     p.StartInfo.Verb = "runas";
                     p.Start();
