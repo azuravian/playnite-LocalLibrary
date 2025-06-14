@@ -114,7 +114,7 @@ namespace LocalLibrary
             List<string> dirFiles = Directory.GetFiles(dir).ToList();
             foreach (string file in dirFiles)
             {
-                if (Path.GetExtension(file) == ".exe")
+                if (Path.GetExtension(file) == ".exe" || Path.GetExtension(file) == ".msi")
                 {
                     string filename = Path.GetFileNameWithoutExtension(file).ToLower();
                     if (filename == "setup" || filename == "install" || filename.Contains("setup") || filename.Contains("install"))
@@ -211,7 +211,7 @@ namespace LocalLibrary
                 SourceId = source,
                 PlatformIds = new List<Guid> { API.Instance.Database.Platforms.FirstOrDefault(a => a.Name == platform)?.Id ?? Guid.Empty }
             };
-            
+
             if (useActions)
             {
                 GameAction action = new GameAction();
@@ -262,8 +262,8 @@ namespace LocalLibrary
                     .Where(action => File.Exists(action.Path) || Directory.Exists(action.Path))
                     .Select(action => new Dictionary<string, string>
                     {
-                        { "Path", action.Path }, 
-                        { "Name", action.Name } 
+                        { "Path", action.Path },
+                        { "Name", action.Name }
                     })
                     .ToList();
             }
@@ -507,12 +507,12 @@ namespace LocalLibrary
                     int totalNewUpdates = 0;
                     foreach (Game game in gamesAdded)
                     {
-                        int updatescount = 
+                        int updatescount =
                         FindGameUpdates(
                             game,
                             useActions && game.GameActions.Any()
                             ? Path.GetDirectoryName(game.GameActions.First().Path)
-                            : game.Roms.Any() 
+                            : game.Roms.Any()
                                 ? Path.GetDirectoryName(game.Roms.First().Path)
                                 : string.Empty,
                             useActions);
