@@ -48,66 +48,74 @@ namespace LocalLibrary
             return new DirectoryInfo(path).Name;
         }
 
-        public Tuple<string, string, List<GameAction>> GetActions(Game game)
+        public Tuple<string, string, List<Dictionary<String, String>>> GetActionsRoms(Game game, bool actions)
         {
             string gameImagePath = null;
             string gameInstallArgs = null;
             List<GameAction> gameActions = new List<GameAction>();
-            if (game.GameActions != null)
+            List<GameRom> gameRoms = new List<GameRom>();
+            List<Dictionary<String, String>> installers = new List<Dictionary<String, String>>();
+            if (actions && game.GameActions != null)
             {
                 gameActions = game.GameActions.ToList();
-                foreach (GameAction g in gameActions)
+                foreach (GameAction ga in gameActions)
                 {
-                    if (g.Name == "Install" || g.Name == "Installer")
+                    if (gameImagePath == null && (ga.Name == "Install" || ga.Name == "Installer"))
                     {
-                        gameImagePath = API.Instance.ExpandGameVariables(game, g).Path;
-                        gameInstallArgs = API.Instance.ExpandGameVariables(game, g).Arguments;
-                        break;
+                        gameImagePath = API.Instance.ExpandGameVariables(game, ga).Path;
+                        gameInstallArgs = API.Instance.ExpandGameVariables(game, ga).Arguments;
+                    }
+                    else
+                    {
+                        Dictionary<String, String> installDict = new Dictionary<String, String>
+                        {
+                            { "Path", API.Instance.ExpandGameVariables(game, ga).Path },
+                            { "InstallArgs", API.Instance.ExpandGameVariables(game, ga).Arguments }
+                        };
+                        installers.Add(installDict);
                     }
                 }
                 if (String.IsNullOrEmpty(gameImagePath) && gameActions.Count > 0)
                 {
                     gameImagePath = API.Instance.ExpandGameVariables(game, gameActions[0]).Path;
+                    installers.Remove(installers.FirstOrDefault(a => a["Path"] == gameImagePath));
                 }
             }
-            else
-            {
-                gameImagePath = API.Instance.ExpandGameVariables(game, game.InstallDirectory);
-            }
-            return Tuple.Create(gameImagePath, gameInstallArgs, gameActions);
-        }
-
-        public Tuple<string, string, List<GameRom>> GetRoms(Game game)
-        {
-            string gameImagePath = null;
-            string gameInstallArgs = null;
-            List<GameRom> gameRoms = new List<GameRom>();
-            if (game.Roms != null)
+            else if (!actions && game.Roms != null)
             {
                 gameRoms = game.Roms.ToList();
                 foreach (GameRom gr in gameRoms)
                 {
                     //Take the ROM with the name Install or Installer and use it as the installer
-                    if (gr.Name == "Install" || gr.Name == "Installer")
+                    if (gameImagePath == null && (gr.Name == "Install" || gr.Name == "Installer"))
                     {
                         gameImagePath = gr.Path;
-                        break;
+                    }
+                    else
+                    {
+                        Dictionary<String, String> installDict = new Dictionary<String, String>
+                        {
+                            { "Path", gr.Path },
+                            { "InstallArgs", null }
+                        };
+                        installers.Add(installDict);
                     }
                 }
                 if (String.IsNullOrEmpty(gameImagePath) && gameRoms.Count > 0)
                 {
                     //If no Install or Installer ROM is found, use the first ROM in the list
                     gameImagePath = gameRoms[0].Path;
+                    installers.Remove(installers.FirstOrDefault(a => a["Path"] == gameImagePath));
                 }
             }
             if (String.IsNullOrEmpty(gameImagePath))
             {
                 gameImagePath = API.Instance.ExpandGameVariables(game, game.InstallDirectory);
             }
-            return Tuple.Create(gameImagePath, gameInstallArgs, gameRoms);
+            return Tuple.Create(gameImagePath, gameInstallArgs, installers);
         }
 
-        public string GetMainInstaller(string dir, bool useActions)
+        public string GetMainInstaller(string dir)
         {
             string gameInstaller = "";
             List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z" };
@@ -134,7 +142,7 @@ namespace LocalLibrary
         public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, Guid source, string platform, List<MergedItem> ignorelist)
         {
             string gamename = Path.GetFileName(dir);
-            string gameInstaller = GetMainInstaller(dir, useActions);
+            string gameInstaller = GetMainInstaller(dir);
             if (gameInstaller == "")
             {
                 return gamesAdded;
@@ -192,9 +200,11 @@ namespace LocalLibrary
                 }
                 else
                 {
-                    GameRom installRom = new GameRom();
-                    installRom.Name = "Install";
-                    installRom.Path = gameInstaller;
+                    GameRom installRom = new GameRom
+                    {
+                        Name = "Install",
+                        Path = gameInstaller
+                    };
                     matchingGame.Roms = new ObservableCollection<GameRom>();
                     matchingGame.Roms.AddMissing(installRom);
                     API.Instance.Database.Games.Update(matchingGame);
@@ -233,9 +243,11 @@ namespace LocalLibrary
             }
             else
             {
-                GameRom installRom = new GameRom();
-                installRom.Name = "Install";
-                installRom.Path = gameInstaller;
+                GameRom installRom = new GameRom
+                {
+                    Name = "Install",
+                    Path = gameInstaller
+                };
                 newGame.Roms = new ObservableCollection<GameRom>();
                 newGame.Roms.AddMissing(installRom);
             }
@@ -374,7 +386,7 @@ namespace LocalLibrary
                     continue;
                 }
 
-                string gameImagePath = useActions ? GetActions(game).Item1 : GetRoms(game).Item1;
+                string gameImagePath = GetActionsRoms(game, useActions).Item1;
                 if (String.IsNullOrEmpty(gameImagePath))
                 {
                     NoItems.Add(game);
