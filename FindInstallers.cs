@@ -47,6 +47,7 @@ namespace LocalLibrary
             return new DirectoryInfo(path).Name;
         }
 
+        // Combined method to get actions or ROMs based on the game and whether actions are requested
         public Tuple<string, string, List<Dictionary<String, String>>> GetActionsRoms(Game game, bool actions)
         {
             string gameImagePath = null;
