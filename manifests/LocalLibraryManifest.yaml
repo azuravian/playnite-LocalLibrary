@@ -26,4 +26,17 @@ Packages:
     PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/1.6.0/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_6_0.pext
     Changelog:
       - New Feature - Add standard strings or regex patterns to remove from folder names when naming games
-      - Fixes - Error caused by Platform not being set
+      - Fixes - Error caused by Platform not being set  - Version: 1.6.1
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2025-06-20
+    PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/v1.6.1/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_6_1.pext
+    Changelog:
+      - ## What's Changed
+      - * Changes to Import Games and correctly triggers Metadata download by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/11
+      - * Source cleanup and detect updates by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/13
+      - * Fixed issue where updates were sometimes not detected. by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/16
+      - * Added MSI option for installers to resolve #3. by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/24
+      - * 1st cleanup revision by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/25
+      - 
+      - 
+      - **Full Changelog**: https://github.com/azuravian/playnite-LocalLibrary/compare/1.6.0...v1.6.1
