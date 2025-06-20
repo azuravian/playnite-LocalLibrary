@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using API = Playnite.SDK.API;
@@ -216,14 +217,6 @@ namespace LocalLibrary
             install.Dispose();
         }
 
-        private void ProcessEnded(object sender, EventArgs e)
-        {
-            if (sender is Process process)
-            {
-                _ = process.ExitCode;
-            }
-        }
-
         public string GetArchiveCommand(string gameImagePath, string gameInstallArgs)
         {
             var response = MessageBox.Show("The installer path points to an archive.  Would you like to select a folder to extract the archive to?", "Archive Detected", MessageBoxButton.YesNo);
@@ -243,68 +236,25 @@ namespace LocalLibrary
             return gameInstallArgs;
         }
 
-        public void GameInstaller(Game game, LocalInstallController install)
+        public async void GameInstaller(Game game, LocalInstallController install)
         {
             Game selectedGame = game;
 
             int code = 0;
             bool failed = false;
             string exce = "";
-            string gameImagePath = null;
-            string gameInstallArgs = null;
-            List<GameAction> gameActions = null;
-            List<GameRom> gameRoms = null;
-            List<string> driveList = new List<string>();
-            List<string> driveList2 = new List<string>();
             string command = null;
             string driveLetter = null;
             string[] archives = { ".7z", ".rar", ".zip" };
             string[] executables = { ".exe", ".msi" };
             bool archive = false;
             bool actions = Settings.Settings.UseActions;
+            Finder finder = new Finder();
 
-            if (actions)
-            {
-                try
-                {
-                    Finder actionsFinder = new Finder();
-                    Tuple<string, string, List<GameAction>> actionsTuple = actionsFinder.GetActions(game);
-                    gameImagePath = actionsTuple.Item1;
-                    gameInstallArgs = actionsTuple.Item2;
-                    gameActions = actionsTuple.Item3;
-
-                    GameAction found = gameActions.FirstOrDefault(a => a.Path == gameImagePath);
-                    if (found != null)
-                    {
-                        gameActions.Remove(found);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex.ToString());
-                }
-            }
-            else
-            {
-                try
-                {
-                    Finder romsFinder = new Finder();
-                    Tuple<string, string, List<GameRom>> romsTuple = romsFinder.GetRoms(game);
-                    gameImagePath = romsTuple.Item1;
-                    gameInstallArgs = romsTuple.Item2;
-                    gameRoms = romsTuple.Item3;
-
-                    GameRom found = gameRoms.FirstOrDefault(a => a.Path == gameImagePath);
-                    if (found != null)
-                    {
-                        gameRoms.Remove(found);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex.ToString());
-                }
-            }
+            var results = finder.GetActionsRoms(game, actions);
+            string gameImagePath = results.Item1;
+            string gameInstallArgs = results.Item2;
+            List<Dictionary<string, string>> extras = results.Item3;
 
             if (String.IsNullOrEmpty(gameImagePath))
             {
@@ -316,40 +266,15 @@ namespace LocalLibrary
             }
             else
             {
-                if (Path.GetFileName(gameImagePath).ToLower().EndsWith(".iso"))
+                if (gameImagePath.ToLower().EndsWith(".iso"))
                 {
-                    foreach (var drive in DriveInfo.GetDrives())
-                    {
-                        driveList.Add(drive.Name);
-                    }
-                    PowerShell mountedDisk = PowerShell.Create();
-                    {
-                        mountedDisk.AddCommand("Mount-DiskImage");
-                        mountedDisk.AddArgument(gameImagePath);
-                        mountedDisk.Invoke();
-                    }
-                    foreach (var drive in DriveInfo.GetDrives())
-                    {
-                        driveList2.Add(drive.Name);
-                    }
-                    foreach (var i in driveList2)
-                    {
-                        if (driveList.Contains(i))
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            command = i + "\\Setup.exe";
-                            driveLetter = i;
-                        }
-                    }
+                    ISOProcess(ref command, ref driveLetter, gameImagePath);
                 }
-                else if (executables.Any(x => gameImagePath.EndsWith(x)))
+                else if (executables.Any(x => gameImagePath.ToLower().EndsWith(x)))
                 {
                     command = gameImagePath;
                 }
-                else if (archives.Any(x => gameImagePath.EndsWith(x)))
+                else if (archives.Any(x => gameImagePath.ToLower().EndsWith(x)))
                 {
                     archive = true;
                     command = Settings.Settings.ArchivePath;
@@ -362,49 +287,9 @@ namespace LocalLibrary
                         return;
                     }
                 }
-                else if (!Path.HasExtension(gameImagePath))
-                {
-                    if (!Directory.Exists(gameImagePath))
-                    {
-                        API.Instance.Dialogs.ShowErrorMessage("The file/folder specified in the installation path does not exist.", "Invalid Path");
-                        return;
-                    }
-                    string setupFile = Path.Combine(gameImagePath, "setup.exe");
-                    if (File.Exists(setupFile))
-                    {
-                        command = setupFile;
-                    }
-                    else
-                    {
-                        List<string> Files = Directory.GetFiles(gameImagePath, "*.*")
-                                                  .Where(file => file.ToLower().EndsWith(".exe") || file.ToLower().EndsWith(".msi")).ToList();
-
-                        if (Files.Count() > 1)
-                        {
-                            MessageBoxResult result = MessageBox.Show("More than 1 possible installer in folder.  Would you like to select the appropriate installer?", "Too many executables", MessageBoxButton.YesNo);
-                            if (result == MessageBoxResult.Yes)
-                            {
-                                command = API.Instance.Dialogs.SelectFile("All Executables|*.exe;*.msi|" + "Installer|*.exe|Installer|*.msi");
-                            }
-                            else
-                            {
-                                return;
-                            }
-                        }
-                        else if (Files.Count().ToString() == "0")
-                        {
-                            API.Instance.Dialogs.ShowErrorMessage("No executables found in folder.  Check  Path.", "No Executables.");
-                            return;
-                        }
-                        else
-                        {
-                            command = Files[0];
-                        }
-                    }
-                }
                 else
                 {
-                    API.Instance.Dialogs.ShowErrorMessage("The provided Rom file has an invalid extension. Please provide valid file or directory.", "Invalid filetype.");
+                    API.Instance.Dialogs.ShowErrorMessage("The provided Rom file has an invalid extension. Please provide valid filetype.", "Invalid filetype.");
                     return;
                 }
             }
@@ -417,59 +302,65 @@ namespace LocalLibrary
                 }
                 else
                 {
-                    return; //
+                    return;
                 }
             }
-            try
+
+            // Run the installer
+            await Task.Run(() =>
             {
-                using (Process p = new Process())
+                try
                 {
-                    String dpath = "";
-                    p.StartInfo.UseShellExecute = true;
+                    using (Process p = new Process())
+                    {
+                        String dpath = "";
+                        p.StartInfo.UseShellExecute = true;
 
-                    if (archive)
-                    {
-                        p.StartInfo.UseShellExecute = false;
-                    }
-
-                    if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
-                    {
-                        p.StartInfo.FileName = "msiexec.exe";
-                        p.StartInfo.Arguments = $"/i \"{command}\" {gameInstallArgs}";
-                    }
-                    else
-                    {
-                        p.StartInfo.FileName = command;
-                        if (gameInstallArgs != null)
+                        if (archive)
                         {
-                            p.StartInfo.Arguments = gameInstallArgs;
+                            p.StartInfo.UseShellExecute = false;
                         }
-                    }
 
-                    if (driveLetter != null)
-                    {
-                        dpath = driveLetter;
-                    }
-                    else if (Path.HasExtension(gameImagePath))
-                    {
-                        dpath = Path.GetDirectoryName(gameImagePath);
-                    }
-                    else
-                    {
-                        dpath = gameImagePath;
-                    }
+                        if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
+                        {
+                            p.StartInfo.FileName = "msiexec.exe";
+                            p.StartInfo.Arguments = $"/i \"{command}\" {gameInstallArgs}";
+                        }
+                        else
+                        {
+                            p.StartInfo.FileName = command;
+                            if (gameInstallArgs != null)
+                            {
+                                p.StartInfo.Arguments = gameInstallArgs;
+                            }
+                        }
 
-                    p.StartInfo.WorkingDirectory = dpath;
-                    p.StartInfo.Verb = "runas";
-                    p.Start();
-                    p.WaitForExit();
-                    code = p.ExitCode;
+                        if (driveLetter != null)
+                        {
+                            dpath = driveLetter;
+                        }
+                        else if (Path.HasExtension(gameImagePath))
+                        {
+                            dpath = Path.GetDirectoryName(gameImagePath);
+                        }
+                        else
+                        {
+                            dpath = gameImagePath;
+                        }
+
+                        p.StartInfo.WorkingDirectory = dpath;
+                        p.StartInfo.Verb = "runas";
+                        p.Start();
+                        p.WaitForExit();
+                        code = p.ExitCode;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                exce = ex.Message;
-            }
+                catch (Exception ex)
+                {
+                    exce = ex.Message;
+                }
+            });
+            
             if (gameImagePath.ToLower().EndsWith(".iso"))
             {
                 PowerShell dismountDisk = PowerShell.Create();
@@ -482,30 +373,55 @@ namespace LocalLibrary
             if (code != 0 || exce != "")
             {
                 failed = true;
-                MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
-                if (result == MessageBoxResult.No)
+                API.Instance.Dialogs.ShowErrorMessage("The installation was either canceled or failed.", "Installation Canceled/Failed");
+                
+                selectedGame.IsInstalling = false;
+                selectedGame.InstallDirectory = null;
+                selectedGame.IsInstalled = false;
+                API.Instance.Database.Games.Update(selectedGame);
+                install.Dispose();
+                return;
+            }
+            if (code == 0)
+            {
+                if (extras.Count > 0)
                 {
-                    selectedGame.IsInstalling = false;
-                    selectedGame.InstallDirectory = null;
-                    selectedGame.IsInstalled = false;
-                    API.Instance.Database.Games.Update(selectedGame);
-                    install.Dispose();
-                    return;
+                    logger.Debug("Multiple paths found, installing extras.");
+                    failed = Install_Extras(extras, selectedGame, install);
                 }
-            }
-            if (Settings.Settings.UseActions && gameActions.Count > 0)
-            {
-                failed = Install_Extras(gameActions, selectedGame, install);
-            }
-            else if (!Settings.Settings.UseActions && gameRoms.Count > 0)
-            {
-                failed = Install_Extras(gameRoms, selectedGame, install);
             }
             if (!failed)
             {
                 GameSelect(selectedGame, install);
             }
             return;
+        }
+
+        private static void ISOProcess(ref string command, ref string driveLetter, string gameImagePath)
+        {
+            List<string> driveList = new List<string>();
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                driveList.Add(drive.Name);
+            }
+            PowerShell mountedDisk = PowerShell.Create();
+            {
+                mountedDisk.AddCommand("Mount-DiskImage");
+                mountedDisk.AddArgument(gameImagePath);
+                mountedDisk.Invoke();
+            }
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                if (driveList.Contains(drive.Name))
+                {
+                    continue;
+                }
+                else
+                {
+                    command = drive.Name + "\\Setup.exe";
+                    driveLetter = drive.Name;
+                }
+            }
         }
 
         private void Delete_PlayActions(IEnumerable<GameAction> actions, Game selectedGame)
@@ -530,18 +446,19 @@ namespace LocalLibrary
             }
         }
 
-        public bool Install_Extras(List<GameRom> extras, Game selectedGame, LocalInstallController install)
+        public bool Install_Extras(List<Dictionary<String,String>> extras, Game selectedGame, LocalInstallController install)
         {
             var failed = false;
-            foreach (GameRom extra in extras)
+            foreach (Dictionary<String, String> extra in extras)
             {
                 int code = 0;
                 string exce = "";
                 string command = null;
-                string extraInstallArgs = null;
-                var extraPath = extra.Path;
+                string extraInstallArgs = extra["Arguments"];
+                string extraPath = extra["Path"];
+                List<string> extensions = new List<string> { ".exe", ".msi", ".bat", ".ps1" , ".ps"};
 
-                if (Path.GetFileName(extraPath).EndsWith(".exe"))
+                if (extensions.Any(x => extraPath.ToLower().EndsWith(x)))
                 {
                     command = extraPath;
                 }
@@ -554,69 +471,30 @@ namespace LocalLibrary
                     using (Process p = new Process())
                     {
                         String dpath = "";
-                        p.StartInfo.FileName = command;
-                        p.StartInfo.UseShellExecute = true;
-                        if (extraInstallArgs != null)
+                        if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
                         {
-                            p.StartInfo.Arguments = extraInstallArgs;
+                            p.StartInfo.FileName = "msiexec.exe";
+                            p.StartInfo.Arguments = $"/i \"{command}\" {extraInstallArgs}";
                         }
-                        dpath = Path.GetDirectoryName(extraPath);
-
-                        p.StartInfo.WorkingDirectory = dpath;
-                        p.StartInfo.Verb = "runas";
-                        p.Start();
-                        p.WaitForExit();
-                        code = p.ExitCode;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    exce = ex.Message;
-                }
-                if (code != 0 || exce != "")
-                {
-                    MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
-                    if (result == MessageBoxResult.No)
-                    {
-                        selectedGame.IsInstalling = false;
-                        selectedGame.InstallDirectory = null;
-                        selectedGame.IsInstalled = false;
-                        API.Instance.Database.Games.Update(selectedGame);
-                        install.Dispose();
-                        return true;
-                    }
-                    failed = false;
-                }
-                failed = false;
-            }
-            return failed;
-        }
-
-        public bool Install_Extras(List<GameAction> extras, Game selectedGame, LocalInstallController install)
-        {
-            var failed = false;
-            foreach (GameAction extra in extras)
-            {
-                int code = 0;
-                string exce = "";
-                string command = null;
-                string extraInstallArgs = null;
-                var extraPath = extra.Path;
-                if (Path.GetFileName(extraPath).EndsWith(".exe"))
-                {
-                    command = extraPath;
-                }
-                try
-                {
-                    using (Process p = new Process())
-                    {
-                        String dpath = "";
-                        p.StartInfo.FileName = command;
-                        p.StartInfo.UseShellExecute = true;
-                        if (extraInstallArgs != null)
+                        else if (Path.GetExtension(command).Equals(".bat", StringComparison.OrdinalIgnoreCase))
                         {
-                            p.StartInfo.Arguments = extraInstallArgs;
+                            p.StartInfo.FileName = "cmd.exe";
+                            p.StartInfo.Arguments = $"/c \"{command}\" {extraInstallArgs}";
                         }
+                        else if (Path.GetExtension(command).Equals(".ps1", StringComparison.OrdinalIgnoreCase))
+                        {
+                            p.StartInfo.FileName = "powershell.exe";
+                            p.StartInfo.Arguments = $"-ExecutionPolicy Bypass -File \"{command}\" {extraInstallArgs}";
+                        }
+                        else
+                        {
+                            p.StartInfo.FileName = command;
+                            if (extraInstallArgs != null)
+                            {
+                                p.StartInfo.Arguments = extraInstallArgs;
+                            }
+                        }
+                        p.StartInfo.UseShellExecute = true;
                         dpath = Path.GetDirectoryName(extraPath);
 
                         p.StartInfo.WorkingDirectory = dpath;
