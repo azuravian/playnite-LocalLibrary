@@ -28,7 +28,7 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"  # e.g., v1.6.0
           $versiondots = $tag.TrimStart("v")
-          $version = $versiondots -replace ".", "_"
+          $version = $versiondots -replace '\.', '_'
           echo "TAG=$tag" >> $env:GITHUB_ENV
           echo "VERSION=$version" >> $env:GITHUB_ENV
           echo "VERSIONDOTS=$versiondots" >> $env:GITHUB_ENV
