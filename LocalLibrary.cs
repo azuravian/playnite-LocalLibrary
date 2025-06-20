@@ -237,6 +237,7 @@ namespace LocalLibrary
             return gameInstallArgs;
         }
 
+        // Install the game
         public async void GameInstaller(Game game, LocalInstallController install)
         {
             Game selectedGame = game;
