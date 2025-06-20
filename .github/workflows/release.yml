@@ -1,0 +1,52 @@
+name: Build and Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'  # Matches v1.6.0, v2.0, etc.
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest  # Required for .NET Framework
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Build with MSBuild
+        run: |
+          msbuild LocalLibrary.sln /p:Configuration=Release
+
+      - name: Set variables
+        id: vars
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"  # e.g., v1.6.0
+          $version = $tag.TrimStart("v")
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+          echo "OUTFILE=LocalLibrary_$tag.pext" >> $env:GITHUB_ENV
+
+      - name: Update extension.yaml version
+        shell: pwsh
+        run: |
+          (Get-Content extension.yaml) `
+            -replace '^(Version:\s*).+$', "Version: $env:VERSION" `
+            | Set-Content extension.yaml
+
+      - name: Prepare release package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package
+          Copy-Item extension.yaml -Destination package/
+          Copy-Item icon.png -Destination package/
+          Copy-Item **\bin\Release\**\LocalLibrary.dll -Destination package/ -Recurse
+          Copy-Item **\bin\Release\**\LocalLibrary.pdb -Destination package/ -Recurse
+          Compress-Archive -Path package\* -DestinationPath $env:OUTFILE -CompressionLevel Optimal
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.OUTFILE }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
