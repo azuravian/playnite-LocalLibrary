@@ -42,10 +42,19 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package
+          
+          $buildOutput = Get-ChildItem -Path . -Recurse -Filter LocalLibrary.dll | Where-Object { $_.FullName -like '*\bin\Release\*' } | Select-Object -First 1
+          $pdbOutput   = Get-ChildItem -Path . -Recurse -Filter LocalLibrary.pdb | Where-Object { $_.FullName -like '*\bin\Release\*' } | Select-Object -First 1
+
+          if ($null -eq $buildOutput -or $null -eq $pdbOutput) {
+            Write-Error "Could not find LocalLibrary.dll or LocalLibrary.pdb"
+            exit 1
+          }
+
+          Copy-Item $buildOutput.FullName -Destination package/
+          Copy-Item $pdbOutput.FullName -Destination package/
           Copy-Item extension.yaml -Destination package/
           Copy-Item icon.png -Destination package/
-          Copy-Item **\bin\Release\**\LocalLibrary.dll -Destination package/ -Recurse
-          Copy-Item **\bin\Release\**\LocalLibrary.pdb -Destination package/ -Recurse
           Compress-Archive -Path package\* -DestinationPath $env:OUTFILE -CompressionLevel Optimal
 
       - name: Create GitHub release
