@@ -427,6 +427,7 @@ namespace LocalLibrary
             }
         }
 
+        // Delete Play actions from the game
         private void Delete_PlayActions(IEnumerable<GameAction> actions, Game selectedGame)
         {
             if (actions != null)
