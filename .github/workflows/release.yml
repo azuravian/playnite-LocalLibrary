@@ -60,26 +60,35 @@ jobs:
           Copy-Item icon.png -Destination package/
           Compress-Archive -Path package\* -DestinationPath $env:OUTFILE -CompressionLevel Optimal
 
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.OUTFILE }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Append to LocalLibraryManifest.yaml
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required for gh CLI
         run: |
           $version = $env:VERSION
+          $versiondots = $env:VERSIONDOTS
           $tag = $env:TAG
           $releaseDate = (Get-Date -Format 'yyyy-MM-dd')
       
           # Download release notes using GitHub CLI
           $notes = gh api repos/${{ github.repository }}/releases/tags/$tag | ConvertFrom-Json
-          $changes = $notes.body -split "`n" | ForEach-Object { "  - $_" }
+          $changes = $notes.body -split "`n" | ForEach-Object { "      - $_" }
       
           # Compose manifest block
           $block = @"
-          - Version: $version
-          RequiredApiVersion: 6.11.0
-          ReleaseDate: $releaseDate
-          PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/$tag/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext
-          Changelog:
+            - Version: $versiondots
+              RequiredApiVersion: 6.11.0
+              ReleaseDate: $releaseDate
+              PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/$tag/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext
+              Changelog:
           $($changes -join "`n")
           "@
 
@@ -89,15 +98,6 @@ jobs:
 
           # Append to manifest file
           Add-Content "manifests/LocalLibraryManifest.yaml" $block
-
-
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ${{ env.OUTFILE }}
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit manifest update
         shell: pwsh
