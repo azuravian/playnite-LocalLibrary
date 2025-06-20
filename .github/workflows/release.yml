@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'  # Matches v1.6.0, v2.0, etc.
 
+permissions:
+  contents: write
+  
 jobs:
   build-and-release:
     runs-on: windows-latest  # Required for .NET Framework
