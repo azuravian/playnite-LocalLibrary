@@ -27,15 +27,18 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${{ github.ref_name }}"  # e.g., v1.6.0
-          $version = $tag.TrimStart("v")
+          $versiondots = $tag.TrimStart("v")
+          $version = $versiondots -replace ".", "_"
+          echo "TAG=$tag" >> $env:GITHUB_ENV
           echo "VERSION=$version" >> $env:GITHUB_ENV
-          echo "OUTFILE=LocalLibrary_$tag.pext" >> $env:GITHUB_ENV
+          echo "VERSIONDOTS=$versiondots" >> $env:GITHUB_ENV
+          echo "OUTFILE=LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext" >> $env:GITHUB_ENV
 
       - name: Update extension.yaml version
         shell: pwsh
         run: |
           (Get-Content extension.yaml) `
-            -replace '^(Version:\s*).+$', "Version: $env:VERSION" `
+            -replace '^(Version:\s*).+$', "Version: $env:VERSIONDOTS" `
             | Set-Content extension.yaml
 
       - name: Prepare release package
@@ -57,10 +60,52 @@ jobs:
           Copy-Item icon.png -Destination package/
           Compress-Archive -Path package\* -DestinationPath $env:OUTFILE -CompressionLevel Optimal
 
+      - name: Append to LocalLibraryManifest.yaml
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required for gh CLI
+        run: |
+          $version = $env:VERSION
+          $tag = $env:TAG
+          $releaseDate = (Get-Date -Format 'yyyy-MM-dd')
+      
+          # Download release notes using GitHub CLI
+          $notes = gh api repos/${{ github.repository }}/releases/tags/$tag | ConvertFrom-Json
+          $changes = $notes.body -split "`n" | ForEach-Object { "  - $_" }
+      
+          # Compose manifest block
+          $block = @"
+          - Version: $version
+          RequiredApiVersion: 6.11.0
+          ReleaseDate: $releaseDate
+          PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/$tag/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext
+          Changelog:
+          $($changes -join "`n")
+          "@
+
+          # debug
+          Write-Host "Appended manifest block:"
+          Write-Host $block
+
+          # Append to manifest file
+          Add-Content "manifests/LocalLibraryManifest.yaml" $block
+
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.OUTFILE }}
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit manifest update
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifests/LocalLibraryManifest.yaml
+          git commit -m "Update manifest for $env:VERSIONDOTS"
+          git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
