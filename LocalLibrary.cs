@@ -217,6 +217,7 @@ namespace LocalLibrary
             install.Dispose();
         }
 
+        // Get the command to extract an archive
         public string GetArchiveCommand(string gameImagePath, string gameInstallArgs)
         {
             var response = MessageBox.Show("The installer path points to an archive.  Would you like to select a folder to extract the archive to?", "Archive Detected", MessageBoxButton.YesNo);
