@@ -399,6 +399,7 @@ namespace LocalLibrary
             return;
         }
 
+        // Process ISO files to find the setup.exe
         private static void ISOProcess(ref string command, ref string driveLetter, string gameImagePath)
         {
             List<string> driveList = new List<string>();
