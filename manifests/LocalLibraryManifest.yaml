@@ -38,3 +38,14 @@ Packages:
       - Added MSI option for installers to resolve #3. by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/24
       - 1st cleanup revision by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/25
       - Full Changelog - https://github.com/azuravian/playnite-LocalLibrary/compare/1.6.0...v1.6.1
+
+  - Version: 1.7.0
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2025-06-23
+    PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/v1.7.0/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_7_0.pext
+    Changelog:
+      - ## What's Changed
+      - * Add support for additional installer file types - closes #22 by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/26
+      - 
+      - 
+      - **Full Changelog**: https://github.com/azuravian/playnite-LocalLibrary/compare/v1.6.1...v1.7.0
