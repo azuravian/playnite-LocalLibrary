@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Forms.VisualStyles;
 using API = Playnite.SDK.API;
 
 namespace LocalLibrary
@@ -119,13 +120,23 @@ namespace LocalLibrary
         {
             string gameInstaller = "";
             List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z" };
+            List<string> prefExt = new List<string> { ".exe", ".msi", ".bat", ".ps", ".ps1" };
             List<string> dirFiles = Directory.GetFiles(dir).ToList();
             foreach (string file in dirFiles)
             {
-                if (Path.GetExtension(file) == ".exe" || Path.GetExtension(file) == ".msi")
+                var fileName = Path.GetFileNameWithoutExtension(file).ToLower();
+                if (prefExt.Contains(Path.GetExtension(file).ToLower()))
                 {
-                    string filename = Path.GetFileNameWithoutExtension(file).ToLower();
-                    if (filename == "setup" || filename == "install" || filename.Contains("setup") || filename.Contains("install"))
+                    // Check for common installer names
+                    if (fileName == "setup" || fileName == "install")
+                    {
+                        gameInstaller = file;
+                        break;
+                    }
+                }
+                else if (prefExt.Contains(Path.GetExtension(file).ToLower()))
+                {
+                    if (fileName.Contains("setup") || fileName.Contains("install"))
                     {
                         gameInstaller = file;
                         break;
@@ -291,7 +302,8 @@ namespace LocalLibrary
                     .ToList();
             }
 
-            var preferredExecutables = new[] { "Patch.exe", "Setup.exe", "Install.exe" };
+            var preferredFilenames = new[] { "patch", "setup", "install" };   
+            var extensions = new[] { ".exe", ".msi", ".bat", ".ps", ".ps1" };
 
             foreach (var entry in entries)
             {
@@ -310,14 +322,13 @@ namespace LocalLibrary
                 }
                 else if (Directory.Exists(entry))
                 {
-                    var validExecutable = Directory.GetFiles(entry, "*.exe", SearchOption.AllDirectories)
-                        .FirstOrDefault(file => preferredExecutables.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase));
-
-                    if (validExecutable == null)
-                    {
-                        validExecutable = Directory.GetFiles(entry, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
-                    }
-
+                    var validExecutable = Directory
+                        .EnumerateFiles(entry, "*", SearchOption.AllDirectories)
+                        .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
+                        .FirstOrDefault(file =>
+                            preferredFilenames.Contains(
+                                Path.GetFileNameWithoutExtension(file),
+                                StringComparer.OrdinalIgnoreCase)) ?? Directory.GetFiles(entry, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
                     if (validExecutable != null)
                     {
                         var newentry = new Dictionary<string, string> { { "Path", validExecutable }, { "Name", "" } };
@@ -392,7 +403,7 @@ namespace LocalLibrary
                     NoItems.Add(game);
                     continue;
                 }
-                List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z" };
+                List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z", ".bat", ".ps", ".ps1" };
                 if (exts.Contains(Path.GetExtension(gameImagePath)) || File.Exists(gameImagePath))
                 {
                     gameImagePath = Path.GetDirectoryName(gameImagePath);

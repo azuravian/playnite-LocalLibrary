@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using API = Playnite.SDK.API;
 
 namespace LocalLibrary
@@ -249,7 +250,9 @@ namespace LocalLibrary
             string driveLetter = null;
             string[] archives = { ".7z", ".rar", ".zip" };
             string[] executables = { ".exe", ".msi" };
+            string[] scripts = { ".bat", ".ps1", ".ps" };
             bool archive = false;
+            bool redirect = false;
             bool actions = Settings.Settings.UseActions;
             Finder finder = new Finder();
 
@@ -268,6 +271,10 @@ namespace LocalLibrary
             }
             else
             {
+                if (gameInstallArgs == null)
+                {
+                    gameInstallArgs = "";
+                }
                 if (gameImagePath.ToLower().EndsWith(".iso"))
                 {
                     ISOProcess(ref command, ref driveLetter, gameImagePath);
@@ -275,6 +282,11 @@ namespace LocalLibrary
                 else if (executables.Any(x => gameImagePath.ToLower().EndsWith(x)))
                 {
                     command = gameImagePath;
+                }
+                else if (scripts.Any(x => gameImagePath.ToLower().EndsWith(x)))
+                {
+                    command = gameImagePath;
+                    redirect = true;
                 }
                 else if (archives.Any(x => gameImagePath.ToLower().EndsWith(x)))
                 {
@@ -313,49 +325,7 @@ namespace LocalLibrary
             {
                 try
                 {
-                    using (Process p = new Process())
-                    {
-                        String dpath = "";
-                        p.StartInfo.UseShellExecute = true;
-
-                        if (archive)
-                        {
-                            p.StartInfo.UseShellExecute = false;
-                        }
-
-                        if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
-                        {
-                            p.StartInfo.FileName = "msiexec.exe";
-                            p.StartInfo.Arguments = $"/i \"{command}\" {gameInstallArgs}";
-                        }
-                        else
-                        {
-                            p.StartInfo.FileName = command;
-                            if (gameInstallArgs != null)
-                            {
-                                p.StartInfo.Arguments = gameInstallArgs;
-                            }
-                        }
-
-                        if (driveLetter != null)
-                        {
-                            dpath = driveLetter;
-                        }
-                        else if (Path.HasExtension(gameImagePath))
-                        {
-                            dpath = Path.GetDirectoryName(gameImagePath);
-                        }
-                        else
-                        {
-                            dpath = gameImagePath;
-                        }
-
-                        p.StartInfo.WorkingDirectory = dpath;
-                        p.StartInfo.Verb = "runas";
-                        p.Start();
-                        p.WaitForExit();
-                        code = p.ExitCode;
-                    }
+                    code = RunCommand(command, driveLetter, redirect, gameImagePath, gameInstallArgs);
                 }
                 catch (Exception ex)
                 {
@@ -397,6 +367,91 @@ namespace LocalLibrary
                 GameSelect(selectedGame, install);
             }
             return;
+        }
+
+        private static int RunCommand(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
+        {
+            int code;
+            using (Process p = new Process())
+            {
+                String dpath = "";
+                if (redirect)
+                {
+                    p.StartInfo.CreateNoWindow = true;
+                    p.StartInfo.UseShellExecute = false;
+                    p.StartInfo.RedirectStandardOutput = true;
+                    p.StartInfo.RedirectStandardError = true;
+                }
+
+
+
+                if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
+                {
+                    p.StartInfo.FileName = "msiexec.exe";
+                    p.StartInfo.Arguments = $"/i \"{command}\" {gameInstallArgs}";
+                }
+                else if (Path.GetExtension(command).Equals(".bat", StringComparison.OrdinalIgnoreCase))
+                {
+                    p.StartInfo.FileName = "cmd.exe";
+                    p.StartInfo.Arguments = $"/c \"{command}\" {gameInstallArgs}";
+                }
+                else if (Path.GetExtension(command).Equals(".ps1", StringComparison.OrdinalIgnoreCase) ||
+                        Path.GetExtension(command).Equals(".ps", StringComparison.OrdinalIgnoreCase))
+                {
+                    var pwsh = @"C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe";
+                    if (!File.Exists(pwsh))
+                    {
+                        pwsh = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
+                    }
+
+                    p.StartInfo.FileName = pwsh;
+                    p.StartInfo.Arguments = $"-ExecutionPolicy Bypass -File \"{command}\" {gameInstallArgs}";
+                }
+                else
+                {
+                    p.StartInfo.FileName = command;
+                    if (gameInstallArgs != null)
+                    {
+                        p.StartInfo.Arguments = gameInstallArgs;
+                    }
+                }
+
+                if (driveLetter != null)
+                {
+                    dpath = driveLetter;
+                }
+                else if (Path.HasExtension(gameImagePath))
+                {
+                    dpath = Path.GetDirectoryName(gameImagePath);
+                }
+                else
+                {
+                    dpath = gameImagePath;
+                }
+
+                p.StartInfo.WorkingDirectory = dpath;
+                p.StartInfo.Verb = "runas";
+                p.Start();
+
+                if (redirect)
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    string error = p.StandardError.ReadToEnd();
+                    if (!string.IsNullOrEmpty(output))
+                    {
+                        logger.Info($"Installer Output: {output}");
+                    }
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        logger.Error($"Installer Error: {error}");
+                    }
+                }
+
+                p.WaitForExit();
+                code = p.ExitCode;
+            }
+
+            return code;
         }
 
         // Process ISO files to find the setup.exe
@@ -458,9 +513,10 @@ namespace LocalLibrary
                 int code = 0;
                 string exce = "";
                 string command = null;
-                string extraInstallArgs = extra["Arguments"];
+                string extraInstallArgs = extra["InstallArgs"];
                 string extraPath = extra["Path"];
                 List<string> extensions = new List<string> { ".exe", ".msi", ".bat", ".ps1" , ".ps"};
+                List<string> redext = new List<string> { ".bat", ".ps1", ".ps" };
 
                 if (extensions.Any(x => extraPath.ToLower().EndsWith(x)))
                 {
@@ -472,41 +528,8 @@ namespace LocalLibrary
                 }
                 try
                 {
-                    using (Process p = new Process())
-                    {
-                        String dpath = "";
-                        if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
-                        {
-                            p.StartInfo.FileName = "msiexec.exe";
-                            p.StartInfo.Arguments = $"/i \"{command}\" {extraInstallArgs}";
-                        }
-                        else if (Path.GetExtension(command).Equals(".bat", StringComparison.OrdinalIgnoreCase))
-                        {
-                            p.StartInfo.FileName = "cmd.exe";
-                            p.StartInfo.Arguments = $"/c \"{command}\" {extraInstallArgs}";
-                        }
-                        else if (Path.GetExtension(command).Equals(".ps1", StringComparison.OrdinalIgnoreCase))
-                        {
-                            p.StartInfo.FileName = "powershell.exe";
-                            p.StartInfo.Arguments = $"-ExecutionPolicy Bypass -File \"{command}\" {extraInstallArgs}";
-                        }
-                        else
-                        {
-                            p.StartInfo.FileName = command;
-                            if (extraInstallArgs != null)
-                            {
-                                p.StartInfo.Arguments = extraInstallArgs;
-                            }
-                        }
-                        p.StartInfo.UseShellExecute = true;
-                        dpath = Path.GetDirectoryName(extraPath);
-
-                        p.StartInfo.WorkingDirectory = dpath;
-                        p.StartInfo.Verb = "runas";
-                        p.Start();
-                        p.WaitForExit();
-                        code = p.ExitCode;
-                    }
+                    bool redirect = redext.Any(x => extraPath.ToLower().EndsWith(x));
+                    code = RunCommand(command, null, redirect, extraPath, extraInstallArgs);
                 }
                 catch (Exception ex)
                 {
