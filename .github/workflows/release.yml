@@ -83,7 +83,8 @@ jobs:
           $changes = $notes.body -split "`n" | ForEach-Object { "      - $_" }
       
           # Compose manifest block
-          $block = @"\n
+          $block = @"
+          
             - Version: $versiondots
               RequiredApiVersion: 6.11.0
               ReleaseDate: $releaseDate
