@@ -369,6 +369,7 @@ namespace LocalLibrary
             return;
         }
 
+        // Extracted method to run the command with proper arguments
         private static int RunCommand(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
         {
             int code;
