@@ -1,10 +1,14 @@
 ﻿using Playnite.SDK;
+
+using LocalLibrary.Helpers;
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System;
 
 namespace LocalLibrary
 {
@@ -71,11 +75,11 @@ namespace LocalLibrary
             if (archivepath != null)
             {
                 ArchivePath.Text = archivepath;
-                if (archivepath.ToLower().Contains("winrar"))
+                if (archivepath.Contains("winrar", StringComparison.OrdinalIgnoreCase))
                 {
                     RBRar.IsChecked = true;
                 }
-                else if (archivepath.ToLower().Contains("7z"))
+                else if (archivepath.Contains("7z", StringComparison.OrdinalIgnoreCase))
                 {
                     RB7z.IsChecked = true;
                 }

@@ -72,6 +72,7 @@
   <ItemGroup>
     <Compile Include="Converters.cs" />
     <Compile Include="GameSourceOption.cs" />
+    <Compile Include="Helpers\Utils.cs" />
     <Compile Include="MergedItem.cs" />
     <Compile Include="FindInstallers.cs" />
     <Compile Include="Levenshtein.cs" />

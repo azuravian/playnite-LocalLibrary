@@ -2,6 +2,9 @@
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
+
+using LocalLibrary.Helpers;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -571,20 +574,16 @@ namespace LocalLibrary
                 string installDir = selectedGame.InstallDirectory.Replace("{Name}", selectedGame.Name);
                 if (Directory.Exists(installDir))
                 {
+                    var validuninsts = new List<string>
+                    {
+                        "uninstall.bat",
+                        "uninstall.exe",
+                        "unins000.exe"
+                    };
                     string[] idFiles = Directory.GetFiles(installDir, "*unins*", SearchOption.AllDirectories);
                     foreach (string idFile in idFiles)
                     {
-                        if (idFile.ToLower().Contains("uninstall.bat"))
-                        {
-                            uninstaller = idFile;
-                            break;
-                        }
-                        else if (idFile.ToLower().Contains("uninstall.exe"))
-                        {
-                            uninstaller = idFile;
-                            break;
-                        }
-                        else if (idFile.ToLower().Contains("unins000.exe"))
+                        if (validuninsts.Contains(idFile, StringComparer.OrdinalIgnoreCase))
                         {
                             uninstaller = idFile;
                             break;
