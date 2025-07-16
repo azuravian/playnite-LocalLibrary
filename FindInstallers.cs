@@ -1,6 +1,7 @@
 ﻿using Playnite.SDK;
-
 using Playnite.SDK.Models;
+
+using LocalLibrary.Helpers;
 
 using System;
 using System.Collections.Generic;
@@ -118,32 +119,39 @@ namespace LocalLibrary
 
         public string GetMainInstaller(string dir)
         {
+            logger.Info($"GetMainInstaller({dir})");
             string gameInstaller = "";
-            List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z" };
+            List<string> validExt = new List<string> { ".iso", ".rar", ".zip", ".7z", ".exe", ".msi", ".bat", ".ps", ".ps1" };
             List<string> prefExt = new List<string> { ".exe", ".msi", ".bat", ".ps", ".ps1" };
             List<string> dirFiles = Directory.GetFiles(dir).ToList();
+            logger.Info($"GetMainInstaller({dir}) - Found {dirFiles.Count} files in directory");
             foreach (string file in dirFiles)
             {
+                logger.Info($"GetMainInstaller({dir}) - Checking file: {file}");
                 var fileName = Path.GetFileNameWithoutExtension(file).ToLower();
-                if (prefExt.Contains(Path.GetExtension(file).ToLower()))
+                if (prefExt.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
                 {
+                    logger.Info($"GetMainInstaller({dir}) - Found preferred extension: {Path.GetExtension(file)} for file: {file}");
                     // Check for common installer names
                     if (fileName == "setup" || fileName == "install")
                     {
                         gameInstaller = file;
                         break;
                     }
-                }
-                else if (prefExt.Contains(Path.GetExtension(file).ToLower()))
-                {
-                    if (fileName.Contains("setup") || fileName.Contains("install"))
+                    else if (fileName.Contains("setup") || fileName.Contains("install"))
                     {
                         gameInstaller = file;
                         break;
                     }
+                    else
+                    {
+                        logger.Info($"GetMainInstaller({dir}) - No preferred installer name found for file: {file}");
+                    }
                 }
-                else if (validExt.Contains(Path.GetExtension(file)))
+                
+                else if (validExt.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
                 {
+                    logger.Info($"GetMainInstaller({dir}) - Found valid extension: {Path.GetExtension(file)} for file: {file}");
                     gameInstaller = file;
                 }
             }
@@ -404,7 +412,7 @@ namespace LocalLibrary
                     continue;
                 }
                 List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z", ".bat", ".ps", ".ps1" };
-                if (exts.Contains(Path.GetExtension(gameImagePath)) || File.Exists(gameImagePath))
+                if (exts.Contains(Path.GetExtension(gameImagePath), StringComparer.OrdinalIgnoreCase) || File.Exists(gameImagePath))
                 {
                     gameImagePath = Path.GetDirectoryName(gameImagePath);
                 }
@@ -420,8 +428,10 @@ namespace LocalLibrary
             GlobalProgressOptions globalProgressOptions = new GlobalProgressOptions(
                 $"Local Library - Finding Installers...",
                 true
-            );
-            globalProgressOptions.IsIndeterminate = false;
+            )
+            {
+                IsIndeterminate = false
+            };
             List<Game> gamesAdded = new List<Game>();
             API.Instance.Dialogs.ActivateGlobalProgress((activateGlobalProgress) =>
             {
@@ -464,7 +474,7 @@ namespace LocalLibrary
                             break;
                         }
 
-                        if (gameInstallDirs.Contains(dir))
+                        if (gameInstallDirs.Contains(dir, StringComparer.OrdinalIgnoreCase))
                         {
                             continue;
                         }
@@ -481,7 +491,7 @@ namespace LocalLibrary
                             string gameInstallDirName = GetDeepestDirectory(gameInstallDir);
                             int ldistance = myLevenshtein.Distance(dirName, gameInstallDirName);
                             float percent = 1 - (Convert.ToSingle(ldistance) / Convert.ToSingle(Math.Max(gameInstallDir.Length, dir.Length)));
-                            percent = percent * 100;
+                            percent *= 100;
                             if (percent >= lpercent)
                             {
                                 posmatches.Add(gameInstallDir);
@@ -521,7 +531,7 @@ namespace LocalLibrary
 
                     foreach (Game game in NoItems)
                     {
-                        if (!gameInstallDirs.Any(dir => dir.Contains(game.Name)))
+                        if (!gameInstallDirs.Any(dir => dir.Contains(game.Name, StringComparison.OrdinalIgnoreCase)))
                         {
                             continue;
                         }
