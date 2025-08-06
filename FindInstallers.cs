@@ -50,8 +50,9 @@ namespace LocalLibrary
         }
 
         // Combined method to get actions or ROMs based on the game and whether actions are requested
-        public Tuple<string, string, List<Dictionary<String, String>>> GetActionsRoms(Game game, bool actions)
+        public Tuple<string, string, List<Dictionary<String, String>>> GetActionsRoms(Game game, LocalLibrarySettings settings)
         {
+            bool actions = settings.UseActions;
             string gameImagePath = null;
             string gameInstallArgs = null;
             List<GameAction> gameActions = new List<GameAction>();
@@ -323,7 +324,7 @@ namespace LocalLibrary
                     continue;
                 }
 
-                if (File.Exists(entry))
+                if (File.Exists(entry) && extensions.Contains(Path.GetExtension(entry), StringComparer.OrdinalIgnoreCase))
                 {
                     var newentry = new Dictionary<string, string> { { "Path", entry }, { "Name", "" } };
                     gameUpdates.Add(newentry);
@@ -385,8 +386,14 @@ namespace LocalLibrary
             return gameUpdates.Count - 1;
         }
 
-        public List<Game> FindInstallers(List<string> installPaths, bool useActions, int lpercent, ObservableCollection<GameSourceOption> sources, string platform, List<MergedItem> ignorelist, bool findupdates)
+        public List<Game> FindInstallers(List<string> installPaths, LocalLibrarySettings settings, List<MergedItem> ignorelist)
         {
+            bool useActions = settings.UseActions;
+            int lpercent = settings.Levenshtein;
+            ObservableCollection<GameSourceOption> sources = settings.SelectedSources;
+            string platform = settings.SelectedPlatform;
+            bool findupdates = settings.FindUpdates;
+
             List<ReportItem> reportItems = new List<ReportItem>();
             List<Game> NoItems = new List<Game>();
             int totalupdates = 0;
@@ -405,7 +412,7 @@ namespace LocalLibrary
                     continue;
                 }
 
-                string gameImagePath = GetActionsRoms(game, useActions).Item1;
+                string gameImagePath = GetActionsRoms(game, settings).Item1;
                 if (String.IsNullOrEmpty(gameImagePath))
                 {
                     NoItems.Add(game);
@@ -540,17 +547,20 @@ namespace LocalLibrary
                     int totalNewUpdates = 0;
                     foreach (Game game in gamesAdded)
                     {
-                        int updatescount =
-                        FindGameUpdates(
-                            game,
-                            useActions && game.GameActions.Any()
-                            ? Path.GetDirectoryName(game.GameActions.First().Path)
-                            : game.Roms.Any()
-                                ? Path.GetDirectoryName(game.Roms.First().Path)
-                                : string.Empty,
-                            useActions);
-                        totalNewUpdates += updatescount;
-                        reportItems.Add(new ReportItem(game.Name, true, updatescount > 0, updatescount));
+                        if (findupdates)
+                        {
+                            int updatescount =
+                            FindGameUpdates(
+                                game,
+                                useActions && game.GameActions.Any()
+                                ? Path.GetDirectoryName(game.GameActions.First().Path)
+                                : game.Roms.Any()
+                                    ? Path.GetDirectoryName(game.Roms.First().Path)
+                                    : string.Empty,
+                                useActions);
+                            totalNewUpdates += updatescount;
+                            reportItems.Add(new ReportItem(game.Name, true, updatescount > 0, updatescount));
+                        }
                     }
 
                     API.Instance.Database.Games.Add(gamesAdded);

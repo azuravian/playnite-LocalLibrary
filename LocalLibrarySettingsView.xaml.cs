@@ -28,6 +28,7 @@ namespace LocalLibrary
         public void Button_AddGames_Click(object sender, RoutedEventArgs e)
         {
             Finder addGames = new Finder();
+            
             List<string> installPaths = PathsBox.Items.Cast<string>().ToList();
 
             if (installPaths == null || !installPaths.Any())
@@ -66,7 +67,11 @@ namespace LocalLibrary
             var ignorelist = RegexList.Items.Cast<string>().Select(item => new MergedItem { Value = item, Source = "Regex" })
                 .Concat(StringList.Items.Cast<string>().Select(item => new MergedItem { Value = item, Source = "String" }))
                 .ToList();
-            addGames.FindInstallers(installPaths, useActions, levenValue, sources, platform, ignorelist, cbFindUpdates.IsChecked ?? false);
+            if (DataContext is LocalLibrarySettingsViewModel viewModel)
+            {
+                addGames.FindInstallers(installPaths, viewModel.Settings, ignorelist);
+            }
+            
         }
 
         public void Button_ArchiveBrowse_Click(object sender, RoutedEventArgs e)
