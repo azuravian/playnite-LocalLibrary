@@ -146,11 +146,11 @@ namespace LocalLibrary
                     }
                     else
                     {
-                        logger.Info($"GetMainInstaller({dir}) - No preferred installer name found for file: {file}");
+                        logger.Info($"GetMainInstaller({dir}) - {file} is not a preferred filename.");
                     }
                 }
                 
-                else if (validExt.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
+                if (validExt.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
                 {
                     logger.Info($"GetMainInstaller({dir}) - Found valid extension: {Path.GetExtension(file)} for file: {file}");
                     gameInstaller = file;
