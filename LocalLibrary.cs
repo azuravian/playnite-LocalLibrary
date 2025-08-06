@@ -97,7 +97,7 @@ namespace LocalLibrary
                 var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
                     .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
                     .ToList();
-                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings.UseActions, Settings.Settings.Levenshtein, Settings.Settings.SelectedSources, Settings.Settings.SelectedPlatform, ignorelist, Settings.Settings.FindUpdates);
+                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings, ignorelist);
             }
             return addedGames;
         }
@@ -256,10 +256,9 @@ namespace LocalLibrary
             string[] scripts = { ".bat", ".ps1", ".ps" };
             bool archive = false;
             bool redirect = false;
-            bool actions = Settings.Settings.UseActions;
             Finder finder = new Finder();
 
-            var results = finder.GetActionsRoms(game, actions);
+            var results = finder.GetActionsRoms(game, Settings.Settings);
             string gameImagePath = results.Item1;
             string gameInstallArgs = results.Item2;
             List<Dictionary<string, string>> extras = results.Item3;
