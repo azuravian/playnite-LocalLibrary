@@ -466,7 +466,7 @@ namespace LocalLibrary
                     {
                         code = RunProcess(redirect, startInfoAdmin);
                     }
-                    catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
+                    catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == ERROR_CANCELLED) // User canceled the UAC prompt
                     {
                         logger.Warn("User canceled the UAC prompt.");
                         code = -1; // Indicate that the user canceled the operation
