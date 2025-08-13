@@ -473,7 +473,7 @@ namespace LocalLibrary
                     }
                 }
             }
-            catch (Win32Exception ex) when (ex.NativeErrorCode == 5) // Access Denied
+            catch (Win32Exception ex) when (ex.NativeErrorCode == ERROR_ACCESS_DENIED) // Access Denied
             {
                 logger.Warn("Access denied, trying to run as administrator.");
                 try
