@@ -459,7 +459,7 @@ namespace LocalLibrary
             try
             { 
                 code = RunProcess(redirect, startInfoUser);
-                if (code == 2)
+                if (code == ExitCodeAccessDenied)
                 {
                     logger.Warn("Access denied, trying to run as administrator.");
                     try
