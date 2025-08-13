@@ -420,7 +420,14 @@ namespace LocalLibrary
                     var pwsh = @"C:\Program Files\PowerShell\7\pwsh.exe";
                     if (!File.Exists(pwsh))
                     {
-                        pwsh = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
+                    var pwsh = FindPowerShellExecutable();
+                    if (string.IsNullOrEmpty(pwsh))
+                    {
+                        pwsh = @"C:\Program Files\PowerShell\7\pwsh.exe";
+                        if (!File.Exists(pwsh))
+                        {
+                            pwsh = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
+                        }
                     }
                     startInfoBase.FileName = pwsh;
                     startInfoBase.Arguments = $"-ExecutionPolicy Bypass -File \"{command}\" {gameInstallArgs}";
