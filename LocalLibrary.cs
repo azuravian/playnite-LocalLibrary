@@ -1,23 +1,22 @@
-﻿using Playnite.SDK;
+﻿using LocalLibrary.Helpers;
+using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
-
-using LocalLibrary.Helpers;
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using API = Playnite.SDK.API;
 
 namespace LocalLibrary
@@ -327,7 +326,7 @@ namespace LocalLibrary
             {
                 try
                 {
-                    code = RunCommand(command, driveLetter, redirect, gameImagePath, gameInstallArgs);
+                    code = BuildAndRun(command, driveLetter, redirect, gameImagePath, gameInstallArgs);
                 }
                 catch (Exception ex)
                 {
@@ -370,70 +369,130 @@ namespace LocalLibrary
             }
             return;
         }
+        private static ProcessStartInfo CloneProcessStartInfo(ProcessStartInfo original)
+        {
+            return new ProcessStartInfo
+            {
+                Arguments = original.Arguments,
+                CreateNoWindow = original.CreateNoWindow,
+                FileName = original.FileName,
+                RedirectStandardError = original.RedirectStandardError,
+                RedirectStandardOutput = original.RedirectStandardOutput,
+                StandardErrorEncoding = original.StandardErrorEncoding,
+                StandardOutputEncoding = original.StandardOutputEncoding,
+                UseShellExecute = original.UseShellExecute,
+                Verb = original.Verb,
+                WorkingDirectory = original.WorkingDirectory
+            };
+        }
 
         // Extracted method to run the command with proper arguments
-        private static int RunCommand(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
+        private static int BuildAndRun(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
         {
             int code;
-            using (Process p = new Process())
+            ProcessStartInfo startInfoBase = new ProcessStartInfo();
+            if (redirect)
             {
-                String dpath = "";
-                if (redirect)
-                {
-                    p.StartInfo.CreateNoWindow = true;
-                    p.StartInfo.UseShellExecute = false;
-                    p.StartInfo.RedirectStandardOutput = true;
-                    p.StartInfo.RedirectStandardError = true;
-                }
-
-
-
-                if (Path.GetExtension(command).Equals(".msi", StringComparison.OrdinalIgnoreCase))
-                {
-                    p.StartInfo.FileName = "msiexec.exe";
-                    p.StartInfo.Arguments = $"/i \"{command}\" {gameInstallArgs}";
-                }
-                else if (Path.GetExtension(command).Equals(".bat", StringComparison.OrdinalIgnoreCase))
-                {
-                    p.StartInfo.FileName = "cmd.exe";
-                    p.StartInfo.Arguments = $"/c \"{command}\" {gameInstallArgs}";
-                }
-                else if (Path.GetExtension(command).Equals(".ps1", StringComparison.OrdinalIgnoreCase) ||
-                        Path.GetExtension(command).Equals(".ps", StringComparison.OrdinalIgnoreCase))
-                {
-                    var pwsh = @"C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe";
+                startInfoBase.CreateNoWindow = true;
+                startInfoBase.UseShellExecute = false;
+                startInfoBase.RedirectStandardOutput = true;
+                startInfoBase.RedirectStandardError = true;
+                startInfoBase.StandardOutputEncoding = Encoding.UTF8;
+                startInfoBase.StandardErrorEncoding = Encoding.UTF8;
+            }
+            if (string.IsNullOrEmpty(command))
+            {
+                throw new ArgumentException("Command cannot be null or empty.", nameof(command));
+            }
+            string extension = Path.GetExtension(command).ToLowerInvariant();
+            switch(extension)
+            {
+                case ".msi":
+                    startInfoBase.FileName = "msiexec.exe";
+                    startInfoBase.Arguments = $"/i \"{command}\" {gameInstallArgs}";
+                    break;
+                case ".bat":
+                    startInfoBase.FileName = "cmd.exe";
+                    startInfoBase.Arguments = $"/c \"{command}\" {gameInstallArgs}";
+                    break;
+                case ".ps1":
+                case ".ps":
+                    var pwsh = @"C:\Program Files\PowerShell\7\pwsh.exe";
                     if (!File.Exists(pwsh))
                     {
                         pwsh = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
                     }
-
-                    p.StartInfo.FileName = pwsh;
-                    p.StartInfo.Arguments = $"-ExecutionPolicy Bypass -File \"{command}\" {gameInstallArgs}";
-                }
-                else
-                {
-                    p.StartInfo.FileName = command;
+                    startInfoBase.FileName = pwsh;
+                    startInfoBase.Arguments = $"-ExecutionPolicy Bypass -File \"{command}\" {gameInstallArgs}";
+                    break;
+                default:
+                    startInfoBase.FileName = command;
                     if (gameInstallArgs != null)
                     {
-                        p.StartInfo.Arguments = gameInstallArgs;
+                        startInfoBase.Arguments = gameInstallArgs;
+                    }
+                    break;
+            }
+            if (!string.IsNullOrEmpty(driveLetter))
+            {
+                startInfoBase.WorkingDirectory = driveLetter;
+            }
+            else if (File.Exists(gameImagePath))
+            {
+                startInfoBase.WorkingDirectory = Path.GetDirectoryName(gameImagePath);
+            }
+            else
+            {
+                startInfoBase.WorkingDirectory = gameImagePath;
+            }
+
+            ProcessStartInfo startInfoUser = CloneProcessStartInfo(startInfoBase);
+            ProcessStartInfo startInfoAdmin = CloneProcessStartInfo(startInfoBase);
+            startInfoAdmin.Verb = "runas"; // Run as administrator
+            try
+            { 
+                code = RunProcess(redirect, startInfoUser);
+                if (code == 2)
+                {
+                    logger.Warn("Access denied, trying to run as administrator.");
+                    try
+                    {
+                        code = RunProcess(redirect, startInfoAdmin);
+                    }
+                    catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
+                    {
+                        logger.Warn("User canceled the UAC prompt.");
+                        code = -1; // Indicate that the user canceled the operation
                     }
                 }
+            }
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 5) // Access Denied
+            {
+                logger.Warn("Access denied, trying to run as administrator.");
+                try
+                {
+                    code = RunProcess(redirect, startInfoAdmin);
+                }
+                catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
+                {
+                    logger.Warn("User canceled the UAC prompt.");
+                    code = -1; // Indicate that the user canceled the operation
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error running process with user privileges.");
+                code = -1; // Indicate an error occurred
+            }
+            logger.Info($"Installer command: {startInfoBase.FileName} {startInfoBase.Arguments} returned code {code}.");
+            return code;
+        }
 
-                if (driveLetter != null)
-                {
-                    dpath = driveLetter;
-                }
-                else if (Path.HasExtension(gameImagePath))
-                {
-                    dpath = Path.GetDirectoryName(gameImagePath);
-                }
-                else
-                {
-                    dpath = gameImagePath;
-                }
-
-                p.StartInfo.WorkingDirectory = dpath;
-                p.StartInfo.Verb = "runas";
+        private static int RunProcess(bool redirect, ProcessStartInfo startInfo)
+        {
+            using (Process p = new Process())
+            {
+                p.StartInfo = startInfo;
                 p.Start();
 
                 if (redirect)
@@ -451,10 +510,8 @@ namespace LocalLibrary
                 }
 
                 p.WaitForExit();
-                code = p.ExitCode;
+                return p.ExitCode;
             }
-
-            return code;
         }
 
         // Process ISO files to find the setup.exe
@@ -532,7 +589,7 @@ namespace LocalLibrary
                 try
                 {
                     bool redirect = redext.Any(x => extraPath.ToLower().EndsWith(x));
-                    code = RunCommand(command, null, redirect, extraPath, extraInstallArgs);
+                    code = BuildAndRun(command, null, redirect, extraPath, extraInstallArgs);
                 }
                 catch (Exception ex)
                 {
