@@ -62,6 +62,8 @@
     <None Include="extension.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="manifests\Azuravian_LocalLibrary.yaml" />
+    <None Include="manifests\LocalLibraryManifest.yaml" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
