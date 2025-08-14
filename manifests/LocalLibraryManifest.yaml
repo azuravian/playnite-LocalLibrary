@@ -45,7 +45,15 @@ Packages:
     Changelog:
       - Add support for additional installer file types - closes Issue 22.
       - Full Changelog - https://github.com/azuravian/playnite-LocalLibrary/compare/v1.6.1...v1.7.0
+
   - Version: 1.8.0
-    RequiredApiVersion: 6.12.0
-    ReleaseDate: 2025-08-13
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2025-08-14
     PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/v1.8.0/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_8_0.pext
+    Changelog:
+      - Add helpers by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/29
+      - Refactor methods to use LocalLibrarySettings object by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/33
+      - Refactor conditional logic in FindInstallers.cs by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/34
+      - Fix-Import and Refactor command execution by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/39
+      - AutoRun Support by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/40
+      - Full Changelog**: https://github.com/azuravian/playnite-LocalLibrary/compare/v1.7.0...v1.8.0
