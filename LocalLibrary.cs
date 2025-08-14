@@ -279,6 +279,7 @@ namespace LocalLibrary
                 if (gameImagePath.ToLower().EndsWith(".iso"))
                 {
                     ISOProcess(ref command, ref driveLetter, gameImagePath);
+                    logger.Debug($"ISO Processed: {gameImagePath}, Command: {command}, Drive Letter: {driveLetter}");
                 }
                 else if (executables.Any(x => gameImagePath.ToLower().EndsWith(x)))
                 {
@@ -536,7 +537,38 @@ namespace LocalLibrary
                 }
                 else
                 {
-                    command = drive.Name + "\\Setup.exe";
+                    var autorunFile = Path.Combine(drive.Name, "autorun.inf");
+                    if (File.Exists(autorunFile))
+                    {
+                        var lines = File.ReadAllLines(autorunFile);
+                        bool inAutorunSection = false;
+
+                        foreach (var rawLine in lines)
+                        {
+                            var line = rawLine.Trim();
+                            if (line.StartsWith("[", StringComparison.Ordinal) && line.EndsWith("]", StringComparison.Ordinal))
+                            {
+                                inAutorunSection = line.Equals("[autorun]", StringComparison.OrdinalIgnoreCase);
+                                continue;
+                            }
+
+                            if (inAutorunSection && line.StartsWith("open", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var parts = line.Split(new[] { '=' }, 2);
+                                if (parts.Length == 2)
+                                {
+                                    var exePath = parts[1].Trim().Trim('"');
+                                    command = Path.Combine(drive.Name, exePath);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else if (command == null && File.Exists(Path.Combine(drive.Name, "Setup.exe")))
+                    {
+                        command = Path.Combine(drive.Name, "Setup.exe");
+                    }
+                    
                     driveLetter = drive.Name;
                 }
             }
