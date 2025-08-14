@@ -56,4 +56,4 @@ Packages:
       - Refactor conditional logic in FindInstallers.cs by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/34
       - Fix-Import and Refactor command execution by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/39
       - AutoRun Support by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/40
-      - Full Changelog**: https://github.com/azuravian/playnite-LocalLibrary/compare/v1.7.0...v1.8.0
+      - Full Changelog - https://github.com/azuravian/playnite-LocalLibrary/compare/v1.7.0...v1.8.0
