@@ -730,24 +730,56 @@ namespace LocalLibrary
                     }
                 }
 
+                ProcessStartInfo uninstallBase = new ProcessStartInfo
+                {
+                    FileName = uninstaller,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8,
+                    WorkingDirectory = Path.GetDirectoryName(uninstaller)                    
+                };
+
+                ProcessStartInfo uninstallUser = CloneProcessStartInfo(uninstallBase);
+                ProcessStartInfo uninstallAdmin = CloneProcessStartInfo(uninstallBase);
+                uninstallAdmin.Verb = "runas"; // Run as administrator
+                bool redirect = true;
                 try
                 {
-                    using (Process p = new Process())
+                    code = RunProcess(redirect, uninstallUser);
+                    if (code == 2)
                     {
-                        String dpath = "";
-                        dpath = Path.GetDirectoryName(uninstaller);
-                        p.StartInfo.FileName = uninstaller;
-                        p.StartInfo.UseShellExecute = true;
-                        p.StartInfo.WorkingDirectory = dpath;
-                        p.StartInfo.Verb = "runas";
-                        p.Start();
-                        p.WaitForExit();
-                        code = p.ExitCode;
+                        logger.Warn("Access denied, trying to run as administrator.");
+                        try
+                        {
+                            code = RunProcess(redirect, uninstallAdmin);
+                        }
+                        catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
+                        {
+                            logger.Warn("User canceled the UAC prompt.");
+                            code = -1; // Indicate that the user canceled the operation
+                        }
+                    }
+                }
+                catch (Win32Exception ex) when (ex.NativeErrorCode == 5) // Access Denied
+                {
+                    logger.Warn("Access denied, trying to run as administrator.");
+                    try
+                    {
+                        code = RunProcess(redirect, uninstallAdmin);
+                    }
+                    catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
+                    {
+                        logger.Warn("User canceled the UAC prompt.");
+                        code = -1; // Indicate that the user canceled the operation
                     }
                 }
                 catch (Exception ex)
                 {
-                    exce = ex.Message;
+                    logger.Error(ex, "Error running process with user privileges.");
+                    code = -1; // Indicate an error occurred
                 }
 
                 if (code != 0 || exce != "")
