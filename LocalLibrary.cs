@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
+using System.Management.Automation.Internal;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -228,7 +229,25 @@ namespace LocalLibrary
             {
                 return "failed";
             }
-            string extractpath = API.Instance.Dialogs.SelectFolder();
+            string extractpath;
+            string defaultRoot = Settings.Settings.DefaultRoot;
+            if (string.IsNullOrEmpty(defaultRoot))
+            {
+                extractpath = API.Instance.Dialogs.SelectFolder();
+                if (string.IsNullOrEmpty(defaultRoot))
+                {
+                    API.Instance.Dialogs.ShowErrorMessage("No default root folder was selected.  The installation will be canceled.", "Install Canceled");
+                    return "failed";
+                }
+            }
+            else
+            {
+                if (!defaultRoot.EndsWith("\\"))
+                {
+                    defaultRoot += "\\";
+                }
+                extractpath = CustomDialogs.SelectFolderWithDefault(defaultRoot, API.Instance.Dialogs);
+            }
             if (Settings.Settings.RB7z)
             {
                 gameInstallArgs = " x -o" + String.Concat("\"", extractpath, "\"") + " " + String.Concat("\"", gameImagePath, "\"");
