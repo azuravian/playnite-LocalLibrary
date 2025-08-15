@@ -44,6 +44,9 @@ namespace LocalLibrary
         private ObservableCollection<string> _stringlist = new ObservableCollection<string>();
         public ObservableCollection<string> StringList { get => _stringlist; set => SetValue(ref _stringlist, value); }
 
+        private string _defaultRoot = string.Empty;
+        public string DefaultRoot { get => _defaultRoot; set => SetValue(ref _defaultRoot, value); }
+
         private int _levenshtein = 100;
         public int Levenshtein { get => _levenshtein; set => SetValue(ref _levenshtein, value); }
 

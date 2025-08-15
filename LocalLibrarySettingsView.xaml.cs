@@ -134,5 +134,14 @@ namespace LocalLibrary
             }
             StringList.Items.Remove(StringList.SelectedItem);
         }
+
+        private void Button_DefaultBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            string defaultRoot = API.Instance.Dialogs.SelectFolder();
+            if (defaultRoot != null)
+            {
+                DefaultRoot.Text = defaultRoot;
+            }
+        }
     }
 }
