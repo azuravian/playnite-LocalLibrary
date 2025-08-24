@@ -81,9 +81,6 @@ jobs:
           $toolboxPath = "$env:TBPATH"
           $sourceDir = "$env:GITHUB_WORKSPACE\bin\Release\"
           $destDir = "$env:GITHUB_WORKSPACE\package"
-          $finalFile = "$destDir\$env:OUTFILE"
-          # Persist
-          echo "FINALFILE=$finalFile" >> $env:GITHUB_ENV
 
           # Ensure output directory exists
           New-Item -ItemType Directory -Force -Path $destDir | Out-Null
@@ -94,7 +91,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ env.FINALFILE }}
+          files: package/${{ env.OUTFILE }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
