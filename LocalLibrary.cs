@@ -389,22 +389,38 @@ namespace LocalLibrary
             }
             return;
         }
-        private static ProcessStartInfo CloneProcessStartInfo(ProcessStartInfo original)
+        private static ProcessStartInfo CloneProcessStartInfo(ProcessStartInfo original, bool elevated = false)
         {
-            return new ProcessStartInfo
+            if (!elevated)
             {
-                Arguments = original.Arguments,
-                CreateNoWindow = original.CreateNoWindow,
-                FileName = original.FileName,
-                RedirectStandardError = original.RedirectStandardError,
-                RedirectStandardOutput = original.RedirectStandardOutput,
-                StandardErrorEncoding = original.StandardErrorEncoding,
-                StandardOutputEncoding = original.StandardOutputEncoding,
-                UseShellExecute = original.UseShellExecute,
-                Verb = original.Verb,
-                WorkingDirectory = original.WorkingDirectory
-            };
+                // Standard (non-admin) run
+                return new ProcessStartInfo
+                {
+                    FileName = original.FileName,
+                    Arguments = original.Arguments,
+                    WorkingDirectory = original.WorkingDirectory,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8
+                };
+            }
+            else
+            {
+                // Elevated run
+                return new ProcessStartInfo
+                {
+                    FileName = original.FileName,
+                    Arguments = original.Arguments,
+                    WorkingDirectory = original.WorkingDirectory,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                };
+            }
         }
+
 
         // Extracted method to run the command with proper arguments
         private static int BuildAndRun(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
@@ -466,18 +482,18 @@ namespace LocalLibrary
                 startInfoBase.WorkingDirectory = gameImagePath;
             }
 
-            ProcessStartInfo startInfoUser = CloneProcessStartInfo(startInfoBase);
-            ProcessStartInfo startInfoAdmin = CloneProcessStartInfo(startInfoBase);
-            startInfoAdmin.Verb = "runas"; // Run as administrator
+            ProcessStartInfo startInfoUser = CloneProcessStartInfo(startInfoBase, elevated: false);
+            ProcessStartInfo startInfoAdmin = CloneProcessStartInfo(startInfoBase, elevated: true);
+            
             try
             {
-                code = RunProcess(redirect, startInfoUser);
+                code = RunProcess(startInfoUser);
                 if (code == 2)
                 {
                     logger.Warn("Access denied, trying to run as administrator.");
                     try
                     {
-                        code = RunProcess(redirect, startInfoAdmin);
+                        code = RunProcess(startInfoAdmin);
                     }
                     catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
                     {
@@ -491,7 +507,7 @@ namespace LocalLibrary
                 logger.Warn("Access denied, trying to run as administrator.");
                 try
                 {
-                    code = RunProcess(redirect, startInfoAdmin);
+                    code = RunProcess(startInfoAdmin);
                 }
                 catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
                 {
@@ -508,14 +524,14 @@ namespace LocalLibrary
             return code;
         }
 
-        private static int RunProcess(bool redirect, ProcessStartInfo startInfo)
+        private static int RunProcess(ProcessStartInfo startInfo)
         {
             using (Process p = new Process())
             {
                 p.StartInfo = startInfo;
                 p.Start();
 
-                if (redirect)
+                if (!startInfo.UseShellExecute)
                 {
                     string output = p.StandardOutput.ReadToEnd();
                     string error = p.StandardError.ReadToEnd();
@@ -690,7 +706,7 @@ namespace LocalLibrary
                     string[] idFiles = Directory.GetFiles(installDir, "*unins*", SearchOption.AllDirectories);
                     foreach (string idFile in idFiles)
                     {
-                        if (validuninsts.Contains(idFile, StringComparer.OrdinalIgnoreCase))
+                        if (validuninsts.Contains(Path.GetFileName(idFile), StringComparer.OrdinalIgnoreCase))
                         {
                             uninstaller = idFile;
                             break;
@@ -761,19 +777,18 @@ namespace LocalLibrary
                     WorkingDirectory = Path.GetDirectoryName(uninstaller)                    
                 };
 
-                ProcessStartInfo uninstallUser = CloneProcessStartInfo(uninstallBase);
-                ProcessStartInfo uninstallAdmin = CloneProcessStartInfo(uninstallBase);
-                uninstallAdmin.Verb = "runas"; // Run as administrator
-                bool redirect = true;
+                ProcessStartInfo uninstallUser = CloneProcessStartInfo(uninstallBase, elevated: false);
+                ProcessStartInfo uninstallAdmin = CloneProcessStartInfo(uninstallBase, elevated: true);
+                
                 try
                 {
-                    code = RunProcess(redirect, uninstallUser);
+                    code = RunProcess(uninstallBase);
                     if (code == 2)
                     {
                         logger.Warn("Access denied, trying to run as administrator.");
                         try
                         {
-                            code = RunProcess(redirect, uninstallAdmin);
+                            code = RunProcess(uninstallAdmin);
                         }
                         catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
                         {
@@ -782,12 +797,12 @@ namespace LocalLibrary
                         }
                     }
                 }
-                catch (Win32Exception ex) when (ex.NativeErrorCode == 5) // Access Denied
+                catch (Win32Exception ex) when (ex.NativeErrorCode == 5 || ex.NativeErrorCode == 740) // Access Denied
                 {
-                    logger.Warn("Access denied, trying to run as administrator.");
+                    logger.Warn("Access denied or elevation required, trying to run as administrator.");
                     try
                     {
-                        code = RunProcess(redirect, uninstallAdmin);
+                        code = RunProcess(uninstallAdmin);
                     }
                     catch (Win32Exception exAdmin) when (exAdmin.NativeErrorCode == 1223) // User canceled the UAC prompt
                     {
