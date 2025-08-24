@@ -74,11 +74,13 @@ jobs:
 
           # Persist
           echo "TBPATH=$toolboxPath" >> $env:GITHUB_ENV
+          echo "EXPATH=$extractPath" >> $env:GITHUB_ENV
 
       - name: Package with Toolbox
         shell: pwsh
         run: |
           $toolboxPath = "$env:TBPATH"
+          $extractPath = "$env:EXPATH"
           & $toolboxPath pack `
             --source "$PWD" `
             --output "$env:OUTFILE" `
