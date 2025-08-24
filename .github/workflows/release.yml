@@ -73,7 +73,7 @@ jobs:
           $toolboxPath = Join-Path $extractPath "Toolbox.exe"
 
           # Persist
-          echo "$TBPATH=$toolboxPath" >> $env:GITHUB_ENV
+          echo "TBPATH=$toolboxPath" >> $env:GITHUB_ENV
 
       - name: Package with Toolbox
         shell: pwsh
