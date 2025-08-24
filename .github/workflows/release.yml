@@ -60,17 +60,25 @@ jobs:
           
           Write-Host "Downloading $zipUrl ..."
           Invoke-WebRequest -Uri $zipUrl -OutFile $pnoutPath
+
+          # Persist
+          echo "PNOUTPATH=$pnoutPath" >> $env:GITHUB_ENV
           
       - name: Extract Toolbox.exe
         shell: pwsh
         run: |
           $extractPath = "$env:TEMP\Playnite"
+          $pnoutPath = "$env:PNOUTPATH"
           Expand-Archive -Path "$pnoutPath" -DestinationPath $extractPath -Force
           $toolboxPath = Join-Path $extractPath "Toolbox.exe"
+
+          # Persist
+          echo "$TBPATH=$toolboxPath" >> $env:GITHUB_ENV
 
       - name: Package with Toolbox
         shell: pwsh
         run: |
+          $toolboxPath = "$env:TBPATH"
           & $toolboxPath pack `
             --source "$PWD" `
             --output "$env:OUTFILE" `
