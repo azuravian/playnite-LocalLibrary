@@ -134,7 +134,7 @@ jobs:
               ReleaseDate: $releaseDate
               PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/$tag/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext
               Changelog:
-          $($changes | ForEach-Object { "    $_" } -join "`n")
+          $(( $changes | ForEach-Object { "    $_" }) -join "`n")
           "@
 
           # debug
