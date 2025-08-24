@@ -41,24 +41,39 @@ jobs:
             -replace '^(Version:\s*).+$', "Version: $env:VERSIONDOTS" `
             | Set-Content extension.yaml
 
-      - name: Prepare release package
+      - name: Download latest Playnite release zip
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path package
+          # Get latest release info
+          $release = gh api repos/JosefNemec/Playnite/releases/latest | ConvertFrom-Json
+          $pntag = $release.tag_name          # e.g., "10.37"
           
-          $buildOutput = Get-ChildItem -Path . -Recurse -Filter LocalLibrary.dll | Where-Object { $_.FullName -like '*\bin\Release\*' } | Select-Object -First 1
-          $pdbOutput   = Get-ChildItem -Path . -Recurse -Filter LocalLibrary.pdb | Where-Object { $_.FullName -like '*\bin\Release\*' } | Select-Object -First 1
+          # Remove periods to form the zip name
+          $versionNoDot = $pntag -replace '\.', ''
+          $zipFileName = "Playnite$versionNoDot.zip"
+          
+          # Build download URL
+          $zipUrl = "https://github.com/JosefNemec/Playnite/releases/download/$pntag/$zipFileName"
+          $pnoutPath = "$env:TEMP\$zipFileName"
+          
+          Write-Host "Downloading $zipUrl ..."
+          Invoke-WebRequest -Uri $zipUrl -OutFile $pnoutPath
+          
+      - name: Extract Toolbox.exe
+        shell: pwsh
+        run: |
+          $extractPath = "$env:TEMP\Playnite"
+          Expand-Archive -Path "$pnoutPath" -DestinationPath $extractPath -Force
+          $toolboxPath = Join-Path $extractPath "Toolbox.exe"
 
-          if ($null -eq $buildOutput -or $null -eq $pdbOutput) {
-            Write-Error "Could not find LocalLibrary.dll or LocalLibrary.pdb"
-            exit 1
-          }
-
-          Copy-Item $buildOutput.FullName -Destination package/
-          Copy-Item $pdbOutput.FullName -Destination package/
-          Copy-Item extension.yaml -Destination package/
-          Copy-Item icon.png -Destination package/
-          Compress-Archive -Path package\* -DestinationPath $env:OUTFILE -CompressionLevel Optimal
+      - name: Package with Toolbox
+        shell: pwsh
+        run: |
+          & $toolboxPath pack `
+            --source "$PWD" `
+            --output "$env:OUTFILE" `
+            --release
+          Remove-Item -Recurse -Force $extractPath
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
