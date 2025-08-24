@@ -90,6 +90,9 @@ jobs:
           
           # Pack the extension
           & $toolboxPath pack "$sourceDir" "$destDir"
+          while (-not (Test-Path $finalFile)) {
+            Start-Sleep -Milliseconds 200
+          }
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
