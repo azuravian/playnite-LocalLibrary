@@ -108,7 +108,23 @@ jobs:
       
           # Download release notes using GitHub CLI
           $notes = gh api repos/${{ github.repository }}/releases/tags/$tag | ConvertFrom-Json
-          $changes = $notes.body -split "`n" | ForEach-Object { "      - $_" }
+          $changes = $notes.body -split "`n" | ForEach-Object {
+            $line = $_.Trim()
+
+            # 1. Lines starting with "- * " -> "- "
+            $line = $line -replace "^- \* ", "- "
+
+            # 2. Remove "#" characters
+            $line = $line -replace "#", ""
+
+            # 3. Skip empty lines that are just "-"
+            if ($line -eq "-") { $null } else { $line }
+          } | Where-Object { $_ -ne $null }
+
+          # 4. Fix final line
+          if ($changes[-1] -match "\*\*Full Changelog\*\*:") {
+            $changes[-1] = $changes[-1] -replace "\*\*Full Changelog\*\*:", "Full Changelog -"
+          }
       
           # Compose manifest block
           $block = @"
@@ -118,7 +134,7 @@ jobs:
               ReleaseDate: $releaseDate
               PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/$tag/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext
               Changelog:
-          $($changes -join "`n")
+          $($changes | ForEach-Object { "    $_" } -join "`n")
           "@
 
           # debug
