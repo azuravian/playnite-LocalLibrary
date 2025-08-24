@@ -43,6 +43,8 @@ jobs:
 
       - name: Download latest Playnite release zip
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get latest release info
           $release = gh api repos/JosefNemec/Playnite/releases/latest | ConvertFrom-Json
