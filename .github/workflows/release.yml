@@ -81,10 +81,7 @@ jobs:
         run: |
           $toolboxPath = "$env:TBPATH"
           $extractPath = "$env:EXPATH"
-          & $toolboxPath pack `
-            --source "$PWD" `
-            --output "$env:OUTFILE" `
-            --release
+          & $toolboxPath pack "$PWD" "$env:OUTFILE"
           Remove-Item -Recurse -Force $extractPath
 
       - name: Create GitHub release
