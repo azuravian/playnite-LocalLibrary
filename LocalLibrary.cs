@@ -1,4 +1,5 @@
 using LocalLibrary.Helpers;
+using Ookii.Dialogs.Wpf;
 using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
@@ -155,7 +156,7 @@ namespace LocalLibrary
         //Prompt user for installation location and create Play action
         public void GameSelect(Game selectedGame, LocalInstallController install)
         {
-            string gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe").Replace(selectedGame.Name, "{Name}");
+            string gameExe = CustomDialogs.SelectFileWithDefault(Settings.Settings.DefaultRoot, "Executables | *.exe", API.Instance.Dialogs, selectedGame);
 
             if (!string.IsNullOrEmpty(gameExe))
             {
@@ -230,23 +231,13 @@ namespace LocalLibrary
             }
             string extractpath;
             string defaultRoot = Settings.Settings.DefaultRoot;
-            if (string.IsNullOrEmpty(defaultRoot))
+            
+            if (!defaultRoot.EndsWith("\\"))
             {
-                extractpath = API.Instance.Dialogs.SelectFolder();
-                if (string.IsNullOrEmpty(defaultRoot))
-                {
-                    API.Instance.Dialogs.ShowErrorMessage("No default root folder was selected.  The installation will be canceled.", "Install Canceled");
-                    return "failed";
-                }
+                defaultRoot += "\\";
             }
-            else
-            {
-                if (!defaultRoot.EndsWith("\\"))
-                {
-                    defaultRoot += "\\";
-                }
-                extractpath = CustomDialogs.SelectFolderWithDefault(defaultRoot, API.Instance.Dialogs);
-            }
+            extractpath = CustomDialogs.SelectFolderWithDefault(defaultRoot, API.Instance.Dialogs);
+            
             if (Settings.Settings.RB7z)
             {
                 gameInstallArgs = " x -o" + String.Concat("\"", extractpath, "\"") + " " + String.Concat("\"", gameImagePath, "\"");
@@ -285,7 +276,7 @@ namespace LocalLibrary
                 var response = MessageBox.Show("The installation path is empty.\nDo you want to specify the location of the installation media?", "No Installation Path", MessageBoxButton.YesNo);
                 if (response == MessageBoxResult.Yes)
                 {
-                    gameImagePath = API.Instance.Dialogs.SelectFolder();
+                    gameImagePath = CustomDialogs.SelectFolderWithDefault(Settings.Settings.DefaultRoot, API.Instance.Dialogs);
                 }
             }
             else

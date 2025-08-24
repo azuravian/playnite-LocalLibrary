@@ -1,10 +1,10 @@
 ﻿using Ookii.Dialogs.Wpf;
 using Playnite.SDK;
+using Playnite.SDK.Models;
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace LocalLibrary.Helpers
 {
@@ -14,15 +14,50 @@ namespace LocalLibrary.Helpers
         {
             return source?.IndexOf(toCheck, comp) >= 0;
         }
+
+        public static string SanitizeDirectoryName(string name, string replacement = "")
+        {
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            var sb = new StringBuilder(name.Length);
+
+            foreach (char c in name)
+            {
+                if (invalidChars.Contains(c))
+                {
+                    if (!string.IsNullOrEmpty(replacement))
+                    {
+                        sb.Append(replacement);
+                    }
+                    // else skip invalid character
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+
+            return sb.ToString();
+        }
+
     }
 
     public class CustomDialogs
     {
         public static string SelectFolderWithDefault(string defaultPath, IDialogsFactory dialogs)
         {
+            if (string.IsNullOrEmpty(defaultPath))
+            {
+                return dialogs.SelectFolder();
+            }
+            else if (!defaultPath.EndsWith("\\") && !defaultPath.EndsWith("/"))
+            { 
+                // Ensure it ends with a slash
+                defaultPath += "\\";
+            }
+              
             var window = dialogs.CreateWindow(new WindowCreationOptions
             {
-                ShowCloseButton = true,
+                ShowCloseButton = true
             });
 
             var picker = new VistaFolderBrowserDialog
@@ -40,5 +75,40 @@ namespace LocalLibrary.Helpers
             return string.Empty;
         }
 
+        public static string SelectFileWithDefault(string defaultPath, string filter, IDialogsFactory dialogs, Game game)
+        {
+            if (string.IsNullOrEmpty(defaultPath))
+            {
+                defaultPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            }
+
+            var gameName = StringExtensions.SanitizeDirectoryName(game.Name);
+            var gameDir = Path.Combine(defaultPath, gameName);
+            if (Directory.Exists(gameDir))
+            {
+                defaultPath = gameDir;
+            }
+
+            var window = dialogs.CreateWindow(new WindowCreationOptions
+            {
+                ShowCloseButton = true
+            });
+            var picker = new VistaOpenFileDialog
+            {
+                Title = "Select a file",
+                Filter = filter,
+                InitialDirectory = defaultPath,
+                FileName = Path.Combine(defaultPath, "*.*"),
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Multiselect = false
+            };
+            if (picker.ShowDialog(window) == true)
+            {
+                return picker.FileName;
+            }
+
+            return string.Empty;
+        }
     }
 }
