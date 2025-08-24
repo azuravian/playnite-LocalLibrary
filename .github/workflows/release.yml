@@ -89,10 +89,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $destDir | Out-Null
           
           # Pack the extension
-          & $toolboxPath pack "$sourceDir" "$destDir"
-          while (-not (Test-Path $finalFile)) {
-            Start-Sleep -Milliseconds 200
-          }
+          Start-Process $toolboxPath -ArgumentList "pack", "$sourceDir", "$destDir" -Wait
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
