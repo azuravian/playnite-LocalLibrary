@@ -5,8 +5,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:LocalLibrary.Converters"
              xmlns:sys="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+             xmlns:vm="clr-namespace:LocalLibrary"
              mc:Ignorable="d"
-             d:DesignHeight="400" d:DesignWidth="600">
+             d:DesignHeight="400" d:DesignWidth="600"
+             d:DataContext="{d:DesignInstance Type=vm:LocalLibrarySettingsViewModel, IsDesignTimeCreatable=True}">
 
     <UserControl.Resources>
         <ControlTemplate x:Key="ArrowRight">
@@ -39,8 +41,7 @@
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>
     </UserControl.Resources>
-
-    <ScrollViewer>
+    
         <TabControl>
             <TabItem BorderThickness="0.5">
                 <TabItem.Header>
@@ -133,10 +134,10 @@
                             </ListBox>
                         </GroupBox>
                     </Grid>
-                    <Button x:Name="ApplyPluginId" Content="Apply PluginId Now" Margin="10" Click="Button_ApplyPluginId_Click" HorizontalAlignment="Center" Grid.Column="0" Grid.Row="2"/>
+                    <Button x:Name="ApplyPluginId" Content="Apply PluginId Now" Margin="10" Command="{Binding ApplyPluginIdCommand}" HorizontalAlignment="Center" Grid.Column="0" Grid.Row="2"/>
                     <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to games in the selected Source(s) automatically" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10" Grid.Column="1" Grid.Row="2"/>
                     <TextBlock Text="Platform" HorizontalAlignment="Center" Grid.Row="3" Grid.Column="0" Margin="10" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="PlatformList" ItemsSource="{Binding Source={StaticResource PlatformsView}}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedPlatform}" Grid.Column="1" Grid.Row="3" Margin="10"/>
+                    <ComboBox x:Name="PlatformList" ItemsSource="{Binding Settings.Platforms}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedPlatform}" Grid.Column="1" Grid.Row="3" Margin="10"/>
                 </Grid>
             </TabItem>
             <TabItem BorderThickness="0.5">
@@ -253,7 +254,7 @@
                                 Value="{Binding Settings.Levenshtein}"
                                 Maximum="100" />
                     </StackPanel>
-                    <Button x:Name="AddGames" Content="Import Games" Margin="0,0,10,0" Click="Button_AddGames_Click" Grid.Column="2" Grid.Row="7" VerticalAlignment="Center" MinHeight="25" MinWidth="80" 
+                    <Button x:Name="AddGames" Content="Import Games" Margin="0,0,10,0" Command="{Binding AddGamesCommand}" Grid.Column="2" Grid.Row="7" VerticalAlignment="Center" MinHeight="25" MinWidth="80" 
                             HorizontalAlignment="Left" ToolTip="Import Games from the paths above using the set Levenshtein distance for matching."/>
                 </Grid>
             </TabItem>
@@ -352,12 +353,8 @@
                             </GroupBox>
                             <DockPanel Margin="10,0,0,20" VerticalAlignment="Bottom">
                                 <TextBlock Text="Path" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBox x:Name="ArchivePath" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10">
-                                    <TextBox.Text>
-                                        <Binding Path="Settings.ArchivePath" UpdateSourceTrigger="PropertyChanged"/>
-                                    </TextBox.Text>
-                                </TextBox>
-                                <Button x:Name="ArchiveBrowse" Content="Browse" Margin="10" Click="Button_ArchiveBrowse_Click" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                <TextBox x:Name="ArchivePath" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10" Text="{Binding Settings.ArchivePath, UpdateSourceTrigger=PropertyChanged}"/>
+                                <Button x:Name="ArchiveBrowse" Content="Browse" Margin="10" Command="{Binding ArchiveBrowseCommand}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
                             </DockPanel>
                         </StackPanel>
                     </GroupBox>
@@ -372,16 +369,103 @@
                                 It is the path that will be opened when prompting for the game executable after install and when prompting for the game folder during extraction.
                             </TextBlock>
                             <TextBlock Text="Root Path" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <TextBox x:Name="DefaultRoot" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10">
-                                <TextBox.Text>
-                                    <Binding Path="Settings.DefaultRoot" UpdateSourceTrigger="PropertyChanged"/>
-                                </TextBox.Text>
-                            </TextBox>
-                            <Button x:Name="DefaultBrowse" Content="Browse" Margin="10" Click="Button_DefaultBrowse_Click" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                            <TextBox x:Name="DefaultRoot" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10" Text="{Binding Settings.DefaultRoot, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button x:Name="DefaultBrowse" Content="Browse" Margin="10" Command="{Binding DefaultBrowseCommand}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
                         </DockPanel>
                     </GroupBox>
                 </StackPanel>
             </TabItem>
+            <TabItem BorderThickness="0.5">
+                <TabItem.Header>
+                    Export
+                </TabItem.Header>
+
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="0.4*"/>
+                        <ColumnDefinition Width="0.6*"/>
+                    </Grid.ColumnDefinitions>
+                    <!-- Column 0: Metadata Checkboxes (scrollable, grouped) -->
+                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <TextBlock Text="Select metadata elements to export:" FontWeight="Bold" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                            <Button Content="Reset to Default" Command="{Binding ResetExportMetadataCommand}" Margin="0,0,0,10" Width="140" HorizontalAlignment="Left"/>
+                            <!-- Text Elements -->
+                            <TextBlock Text="Text Elements" FontWeight="Bold" Margin="0,10,0,5"/>
+                            <ItemsControl ItemsSource="{Binding Settings.ExportTextElements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- Status Elements -->
+                            <TextBlock Text="Status Elements" FontWeight="Bold" Margin="0,10,0,5"/>
+                            <ItemsControl ItemsSource="{Binding Settings.ExportStatusElements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- Scores -->
+                            <TextBlock Text="Scores" FontWeight="Bold" Margin="0,10,0,5"/>
+                            <ItemsControl ItemsSource="{Binding Settings.ExportScoreElements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- Dates & Times -->
+                            <TextBlock Text="Dates &amp; Times" FontWeight="Bold" Margin="0,10,0,5"/>
+                            <ItemsControl ItemsSource="{Binding Settings.ExportDateElements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- Media -->
+                            <TextBlock Text="Media" FontWeight="Bold" Margin="0,10,0,5"/>
+                            <ItemsControl ItemsSource="{Binding Settings.ExportMediaElements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- Scripts -->
+                            <TextBlock Text="Scripts" FontWeight="Bold" Margin="0,10,0,5"/>
+                            <ItemsControl ItemsSource="{Binding Settings.ExportScriptElements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <!-- Column 1: Export Settings -->
+                    <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Top">
+                        <TextBlock Text="Location Setting" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <ComboBox SelectedItem="{Binding Settings.LocationSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
+                            <ComboBoxItem Content="Use Default Path"/>
+                            <ComboBoxItem Content="Prompt for Location"/>
+                        </ComboBox>
+                        <TextBlock Text="Default Metadata Path" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <DockPanel Margin="0,0,0,15">
+                            <TextBox Text="{Binding Settings.DefaultMetadataPath, Mode=TwoWay}" MinWidth="120" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <Button Content="Browse" MinWidth="60" VerticalAlignment="Center" Command="{Binding DefaultBrowseCommand}"/>
+                        </DockPanel>
+                        <TextBlock Text="Config" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <ComboBox SelectedItem="{Binding Settings.ConfigSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
+                            <ComboBoxItem Content="Use Default Metadata Set"/>
+                            <ComboBoxItem Content="Prompt for Metadata"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
         </TabControl>
-    </ScrollViewer>
+    
 </UserControl>

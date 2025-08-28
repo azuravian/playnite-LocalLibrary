@@ -55,7 +55,7 @@ namespace LocalLibrary
 
         public override UserControl GetSettingsView(bool firstRunSettings)
         {
-            return new LocalLibrarySettingsView();
+            return new LocalLibrarySettingsView(this);
         }
 
         public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
