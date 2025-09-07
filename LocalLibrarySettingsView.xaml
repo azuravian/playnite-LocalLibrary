@@ -41,431 +41,423 @@
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>
     </UserControl.Resources>
-    
-        <TabControl>
-            <TabItem BorderThickness="0.5">
-                <TabItem.Header>
-                    Source and Platform
-                </TabItem.Header>
-                <Grid Margin="0,20">
+
+    <TabControl>
+        <TabItem BorderThickness="0.5">
+            <TabItem.Header>
+                Source and Platform
+            </TabItem.Header>
+            <Grid Margin="0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.2*"/>
+                    <ColumnDefinition Width="0.6*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="0.2*"/>
-                        <ColumnDefinition Width="0.6*"/>
+                        <ColumnDefinition Width="0.35*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="0.45*"/>
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="0.35*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="0.45*"/>
-                        </Grid.ColumnDefinitions>
-                        <GroupBox Grid.Column="0" Margin="10,0,10,0">
-                            <GroupBox.Header>
-                                Available Sources
-                            </GroupBox.Header>
-                            <ListBox x:Name="SourcesList" ItemsSource="{Binding Source={StaticResource PluginSourcesView}}" DisplayMemberPath="Name" MinHeight="150" MaxHeight="250" Margin="5" SelectionMode="Extended"/>
-                        </GroupBox>
-                        <Grid Grid.Column="1">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <Button x:Name="AddSource" Margin="5" Command="{Binding AddSourceCommand}" Grid.Row="0" Height="40" Width="40" VerticalAlignment="Bottom"
-                                            CommandParameter="{Binding SelectedItems, ElementName=SourcesList}">
-                                <ContentControl Template="{StaticResource ArrowRight}" />
-                            </Button>
-                            <Button x:Name="CreateSource" Margin="0" Command="{Binding CreateSourceCommand}" Grid.Row="1" Height="40" Width="40" VerticalAlignment="Center">
-                                <ContentControl Template="{StaticResource AddIcon}" />
-                            </Button>
-                            <Button x:Name="RemoveSource" Margin="5" Command="{Binding RemoveSourceCommand}" Grid.Row="2" Height="40" Width="40" VerticalAlignment="Top"
-                                            CommandParameter="{Binding SelectedItems, ElementName=SelectedSourcesList}">
-                                <ContentControl Template="{StaticResource ArrowLeft}" />
-                            </Button>
-                        </Grid>
-                        <GroupBox Grid.Column="2" Margin="10,0,10,0">
-                            <GroupBox.Header>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock>
-                                        Selected Sources
-                                    </TextBlock>
-                                    <TextBlock Margin="10,3,0,0">
-                                        <TextBlock.ToolTip>
-                                            <TextBlock>
-                                                All games in Sources added to this box may be modified by this plugin.
-                                                <LineBreak /> 
-                                                I recommend using Sources for Local Library that are not used anywhere else.
-                                            </TextBlock>
-                                        </TextBlock.ToolTip>
-                                        <ContentControl Template="{StaticResource InfoTag}" />
-                                    </TextBlock>
-                                </StackPanel>
-                            </GroupBox.Header>
-                            <ListBox x:Name="SelectedSourcesList" ItemsSource="{Binding Settings.SelectedSources}" MinHeight="100" Margin="5">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- TextBlock with visual styling for the primary source -->
-                                            <TextBlock Text="{Binding Name}" 
-                                                VerticalAlignment="Center" 
-                                                Grid.Column="0" 
-                                                FontStyle="{Binding IsPrimary, Converter={StaticResource BoolToFontStyleConverter}}" 
-                                                Foreground="{Binding IsPrimary, Converter={StaticResource BoolToBrushConverter}}" />
-
-                                            <!-- Button to set primary source -->
-                                            <Button Content="Set Primary" 
-                                                Command="{Binding DataContext.SetPrimaryCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
-                                                CommandParameter="{Binding}" 
-                                                VerticalAlignment="Center" 
-                                                Grid.Column="1" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </GroupBox>
+                    <GroupBox Grid.Column="0" Margin="10,0,10,0">
+                        <GroupBox.Header>
+                            <TextBlock FontWeight="Bold">Available Sources</TextBlock>
+                        </GroupBox.Header>
+                        <ListBox x:Name="SourcesList" ItemsSource="{Binding Source={StaticResource PluginSourcesView}}" DisplayMemberPath="Name" MinHeight="150" MaxHeight="250" Margin="5" SelectionMode="Extended"/>
+                    </GroupBox>
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Button x:Name="AddSource" Margin="5" Command="{Binding AddSourceCommand}" Grid.Row="0" Height="40" Width="40" VerticalAlignment="Bottom"
+                                        CommandParameter="{Binding SelectedItems, ElementName=SourcesList}">
+                            <ContentControl Template="{StaticResource ArrowRight}" />
+                        </Button>
+                        <Button x:Name="CreateSource" Margin="0" Command="{Binding CreateSourceCommand}" Grid.Row="1" Height="40" Width="40" VerticalAlignment="Center">
+                            <ContentControl Template="{StaticResource AddIcon}" />
+                        </Button>
+                        <Button x:Name="RemoveSource" Margin="5" Command="{Binding RemoveSourceCommand}" Grid.Row="2" Height="40" Width="40" VerticalAlignment="Top"
+                                        CommandParameter="{Binding SelectedItems, ElementName=SelectedSourcesList}">
+                            <ContentControl Template="{StaticResource ArrowLeft}" />
+                        </Button>
                     </Grid>
-                    <Button x:Name="ApplyPluginId" Content="Apply PluginId Now" Margin="10" Command="{Binding ApplyPluginIdCommand}" HorizontalAlignment="Center" Grid.Column="0" Grid.Row="2"/>
-                    <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to games in the selected Source(s) automatically" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10" Grid.Column="1" Grid.Row="2"/>
-                    <TextBlock Text="Platform" HorizontalAlignment="Center" Grid.Row="3" Grid.Column="0" Margin="10" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="PlatformList" ItemsSource="{Binding Settings.Platforms}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedPlatform}" Grid.Column="1" Grid.Row="3" Margin="10"/>
+                    <GroupBox Grid.Column="2" Margin="10,0,10,0">
+                        <GroupBox.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock>
+                                    <TextBlock FontWeight="Bold">Selected Sources</TextBlock>
+                                </TextBlock>
+                                <TextBlock Margin="10,3,0,0">
+                                    <TextBlock.ToolTip>
+                                        <TextBlock>
+                                            All games in Sources added to this box may be modified by this plugin.
+                                            <LineBreak /> 
+                                            I recommend using Sources for Local Library that are not used anywhere else.
+                                        </TextBlock>
+                                    </TextBlock.ToolTip>
+                                    <ContentControl Template="{StaticResource InfoTag}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </GroupBox.Header>
+                        <ListBox x:Name="SelectedSourcesList" ItemsSource="{Binding Settings.SelectedSources}" MinHeight="100" Margin="5">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- TextBlock with visual styling for the primary source -->
+                                        <TextBlock Text="{Binding Name}" 
+                                            VerticalAlignment="Center" 
+                                            Grid.Column="0" 
+                                            FontStyle="{Binding IsPrimary, Converter={StaticResource BoolToFontStyleConverter}}" 
+                                            Foreground="{Binding IsPrimary, Converter={StaticResource BoolToBrushConverter}}" />
+
+                                        <!-- Button to set primary source -->
+                                        <Button Content="Set Primary" 
+                                            Command="{Binding DataContext.SetPrimaryCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                                            CommandParameter="{Binding}" 
+                                            VerticalAlignment="Center" 
+                                            Grid.Column="1" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </GroupBox>
                 </Grid>
-            </TabItem>
-            <TabItem BorderThickness="0.5">
-                <TabItem.Header>
-                    Installer Path(s)
-                </TabItem.Header>
-                <Grid Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="0.6*"/>
-                        <ColumnDefinition Width="0.2*"/>
-                        <ColumnDefinition Width="0.2*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Orientation="Horizontal">
-                        <CheckBox x:Name="cbActions" IsChecked="{Binding Settings.UseActions}" Content="Use Actions instead of ROMS for storing Installer path." Margin="10,0,10,10" />
-                    </StackPanel>
-                    <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal">
-                        <CheckBox x:Name="cbRemovePlay" IsChecked="{Binding Settings.RemovePlay}" Content="Remove Play Action after uninstalling game." Margin="10,0,10,10"/>
-                        <TextBlock Margin="3,4">
-                            <TextBlock.ToolTip>
-                                <TextBlock>
-                                    Warning: Selecting this option will remove all play actions 
-                                    <LineBreak /> 
-                                    from Local Library games when they are uninstalled,
-                                    <LineBreak />
-                                    even if those play actions were created separately.
-                                </TextBlock>
-                            </TextBlock.ToolTip>
-                            <ContentControl Template="{StaticResource InfoTag}"/>
-                        </TextBlock>
-                    </StackPanel>
-                    <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal">
-                        <CheckBox x:Name="cbFindUpdates" IsChecked="{Binding Settings.FindUpdates}" Content="Detect game updates when importing games." Margin="10,0,10,10"/>
-                        <TextBlock Margin="3,4">
-                            <TextBlock.ToolTip>
-                                <TextBlock>
-                                    Game updates must be placed inside an "Updates" folder 
-                                    <LineBreak /> 
-                                    within the directory containing the games installer.
-                                    <LineBreak />
-                                    This option will detect these updates and add them to the game.
-                                    <LineBreak />
-                                    They will be installed automatically after the game is installed.
-                                </TextBlock>
-                            </TextBlock.ToolTip>
+                <Button x:Name="ApplyPluginId" Content="Apply PluginId Now" Margin="10" Command="{Binding ApplyPluginIdCommand}" HorizontalAlignment="Center" Grid.Column="0" Grid.Row="2"/>
+                <CheckBox IsChecked="{Binding Settings.AutoUpdate}" Content="Apply to games in the selected Source(s) automatically" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10" Grid.Column="1" Grid.Row="2"/>
+                <TextBlock Text="Platform" FontWeight="Bold" HorizontalAlignment="Center" Grid.Row="3" Grid.Column="0" Margin="10" VerticalAlignment="Center"/>
+                <ComboBox x:Name="PlatformList" ItemsSource="{Binding Settings.Platforms}" DisplayMemberPath="Name" SelectedValuePath="Name" SelectedValue="{Binding Settings.SelectedPlatform}" Grid.Column="1" Grid.Row="3" Margin="10"/>
+            </Grid>
+        </TabItem>
+        <TabItem BorderThickness="0.5">
+            <TabItem.Header>
+                Installer Path(s)
+            </TabItem.Header>
+            <Grid Margin="0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.6*"/>
+                    <ColumnDefinition Width="0.2*"/>
+                    <ColumnDefinition Width="0.2*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Orientation="Horizontal">
+                    <CheckBox x:Name="cbActions" IsChecked="{Binding Settings.UseActions}" Content="Use Actions instead of ROMS for storing Installer path." Margin="10,0,10,10" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal">
+                    <CheckBox x:Name="cbRemovePlay" IsChecked="{Binding Settings.RemovePlay}" Content="Remove Play Action after uninstalling game." Margin="10,0,10,10"/>
+                    <TextBlock Margin="3,4">
+                        <TextBlock.ToolTip>
+                            <TextBlock>
+                                Warning: Selecting this option will remove all play actions 
+                                <LineBreak /> 
+                                from Local Library games when they are uninstalled,
+                                <LineBreak />
+                                even if those play actions were created separately.
+                            </TextBlock>
+                        </TextBlock.ToolTip>
                         <ContentControl Template="{StaticResource InfoTag}"/>
                     </TextBlock>
-                    </StackPanel>
-                    <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal">
-                        <CheckBox x:Name="cbPaths" IsChecked="{Binding Settings.UsePaths}" Content="On Library Update, import new game installers added to the paths below." Margin="10,0,10,10"/>
-                        <TextBlock Margin="3,4">
-                            <TextBlock.ToolTip>
-                                <TextBlock>
-                                    Selecting this option will search through the directories added
-                                    <LineBreak /> 
-                                    below for all subfolders.  Any folder containing a game
-                                    <LineBreak />
-                                    will be added to Playnite if it does not already have an entry.
-                                </TextBlock>
-                            </TextBlock.ToolTip>
-                            <ContentControl Template="{StaticResource InfoTag}" />
-                        </TextBlock>
-                    </StackPanel>
-                    
-                    <ListBox x:Name="PathsBox" ItemsSource="{Binding Settings.InstallPaths}" Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="3" 
-                            Margin="10,0,20,0" MinHeight="100" MinWidth="200" VerticalAlignment="Center" SelectionMode="Extended"/>
-                    <Button x:Name="AddPath" Content="Add Path" Margin="10,15,10,10" Command="{Binding AddPathCommand}" 
-                            Grid.Column="0" Grid.Row="5" HorizontalAlignment="Left" VerticalAlignment="Center" MinHeight="25"/>
-                    <Button x:Name="RemovePath" Content="Remove Path" Margin="10,15,10,10" Command="{Binding RemovePathCommand}" 
-                            Grid.Column="0" Grid.Row="5" VerticalAlignment="Center" MinHeight="25" HorizontalAlignment="Right"
-                            CommandParameter="{Binding SelectedItems, ElementName=PathsBox}"/>
-                    <StackPanel Grid.Row="6" Grid.ColumnSpan="3" Orientation="Horizontal">
-                        <TextBlock VerticalAlignment="Center" Margin="10" TextWrapping="Wrap" Text="Levenshtein Distance Matching" />
-                        <TextBlock Margin="0,3,0,0" VerticalAlignment="Center">
-                            <TextBlock.ToolTip>
-                                <TextBlock>
-                                    Select the number to represent the % match you want in order to consider a path excluded.
-                                    <LineBreak /> 
-                                    For example, if you select 94, any path found where you already have a game with an
-                                    <LineBreak />
-                                    installer path that matches by 94% or higher would be excluded as long as it is the
-                                    <LineBreak />
-                                    only path that meets those requirements.  This is only comparing the 1st subfolder names,
-                                    <LineBreak />
-                                    so keep that in mind.  Between 90 and 95 will probably work for most people.
-                                </TextBlock>
-                            </TextBlock.ToolTip>
-                            <ContentControl Template="{StaticResource InfoTag}"/>
-                        </TextBlock>
-                    </StackPanel>
-                    
-                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Margin="10" Grid.Row="7">
-                        <TextBlock VerticalAlignment="Center"
-                                   Text="Percentage" 
-                                   Margin="0,0,10,0" />
-                        <TextBox VerticalAlignment="Center"
-                                 IsReadOnly="True" MinWidth="35"
-                                 Margin="0,0,10,0"
-                                 Text="{Binding Settings.Levenshtein}" />
-                        <Slider IsSnapToTickEnabled="True" Minimum="81"
-                                x:Name="LevenSlider"
-                                Width="200"
-                                VerticalAlignment="Center"
-                                TickFrequency="1"
-                                Value="{Binding Settings.Levenshtein}"
-                                Maximum="100" />
-                    </StackPanel>
-                    <Button x:Name="AddGames" Content="Import Games" Margin="0,0,10,0" Command="{Binding AddGamesCommand}" Grid.Column="2" Grid.Row="7" VerticalAlignment="Center" MinHeight="25" MinWidth="80" 
-                            HorizontalAlignment="Left" ToolTip="Import Games from the paths above using the set Levenshtein distance for matching."/>
-                </Grid>
-            </TabItem>
-            <TabItem BorderThickness="0.5">
-                <TabItem.Header>
-                    Ignore List
-                </TabItem.Header>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="67*"/>
-                        <ColumnDefinition Width="221*"/>
-                        <ColumnDefinition Width="289*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Instruction Text -->
-                    <TextBlock Margin="15,10,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" TextWrapping="Wrap">
-                        Lists to automatically remove from folder name when setting the Name for a new Game
-                    </TextBlock>
-
-                    <!-- Regex Patterns GroupBox -->
-                    <GroupBox Grid.Column="0" Margin="10,46,10,26" Grid.ColumnSpan="2" Grid.RowSpan="2">
-                        <GroupBox.Header>
-                            Regex Patterns
-                        </GroupBox.Header>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <ListBox x:Name="RegexList" ItemsSource="{Binding Settings.RegexList}" MinHeight="100" Margin="10,0,0,0" SelectionMode="Extended"/>
-                            <Grid Grid.Row="1" Margin="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox x:Name="RegexBox" Text="{Binding NewRegexText, UpdateSourceTrigger=PropertyChanged}" MinWidth="100" Margin="5" Grid.Column="0" />
-                                <Button x:Name="AddRegex" Content="Add" Margin="5" Command="{Binding AddRegexCommand}" Grid.Column="1"/>
-                                <Button x:Name="RemoveRegex" Content="Remove" Margin="5" Command="{Binding RemoveRegexCommand}" Grid.Column="2"
-                                        CommandParameter="{Binding SelectedItems, ElementName=RegexList}"/>
-                            </Grid>
-                        </Grid>
-                    </GroupBox>
-
-                    <!-- Strings GroupBox -->
-                    <GroupBox Grid.Column="2" Margin="10,46,10,26" Grid.RowSpan="2">
-                        <GroupBox.Header>
-                            Strings
-                        </GroupBox.Header>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <ListBox x:Name="StringList" ItemsSource="{Binding Settings.StringList}" MinHeight="200" Margin="0,0,10,0" SelectionMode="Extended"/>
-                            <Grid Grid.Row="1" Margin="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox x:Name="StringBox" Text="{Binding NewStringText, UpdateSourceTrigger=PropertyChanged}" MinWidth="100" Margin="5" Grid.Column="0"/>
-                                <Button x:Name="AddString" Content="Add" Margin="5" Command="{Binding AddStringCommand}" Grid.Column="1"/>
-                                <Button x:Name="RemoveString" Content="Remove" Margin="5" Command="{Binding RemoveStringCommand}" Grid.Column="2"
-                                        CommandParameter="{Binding SelectedItems, ElementName=StringList}"/>
-                            </Grid>
-                        </Grid>
-                    </GroupBox>
-                </Grid>
-            </TabItem>
-
-            <TabItem BorderThickness="0.5">
-                <TabItem.Header>
-                    Other
-                </TabItem.Header>
-                <StackPanel>
-                    <GroupBox Margin="10" VerticalAlignment="Top">
-                        <GroupBox.Header>
-                            Extraction Settings
-                        </GroupBox.Header>
-                        <StackPanel>
-                            <GroupBox Margin="10" VerticalAlignment="Bottom">
-                                <GroupBox.Header>
-                                    Tool Selection
-                                </GroupBox.Header>
-                                <DockPanel>
-                                    <RadioButton x:Name="RB7z" IsChecked="{Binding Settings.RB7z}" Margin="10"/>
-                                    <Label Margin="0,0,5,0" VerticalAlignment="Center">7zip</Label>
-                                    <RadioButton x:Name="RBRar" IsChecked="{Binding Settings.RBRar}" Margin="10"/>
-                                    <Label Margin="0,0,5,0" VerticalAlignment="Center">WinRar</Label>
-                                </DockPanel>
-                            </GroupBox>
-                            <DockPanel Margin="10,0,0,20" VerticalAlignment="Bottom">
-                                <TextBlock Text="Path" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBox x:Name="ArchivePath" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10" Text="{Binding Settings.ArchivePath, UpdateSourceTrigger=PropertyChanged}"/>
-                                <Button x:Name="ArchiveBrowse" Content="Browse" Margin="10" Command="{Binding ArchiveBrowseCommand}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                            </DockPanel>
-                        </StackPanel>
-                    </GroupBox>
-                    <GroupBox Margin="10">
-                        <GroupBox.Header>
-                            Default Install Root
-                        </GroupBox.Header>
-                        <DockPanel Margin="10,0,0,20" VerticalAlignment="Bottom">
-                            <TextBlock VerticalAlignment="Center" Margin="0,10,5,0" DockPanel.Dock="Top" TextWrapping="Wrap">
-                                This is the default path used when installing games.
-                                <LineBreak />
-                                It is the path that will be opened when prompting for the game executable after install and when prompting for the game folder during extraction.
-                            </TextBlock>
-                            <TextBlock Text="Root Path" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <TextBox x:Name="DefaultRoot" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10" Text="{Binding Settings.DefaultRoot, UpdateSourceTrigger=PropertyChanged}"/>
-                            <Button x:Name="DefaultBrowse" Content="Browse" Margin="10" Command="{Binding DefaultBrowseCommand}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                        </DockPanel>
-                    </GroupBox>
                 </StackPanel>
-            </TabItem>
-            <TabItem BorderThickness="0.5">
-                <TabItem.Header>
-                    Export
-                </TabItem.Header>
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal">
+                    <CheckBox x:Name="cbFindUpdates" IsChecked="{Binding Settings.FindUpdates}" Content="Detect game updates when importing games." Margin="10,0,10,10"/>
+                    <TextBlock Margin="3,4">
+                        <TextBlock.ToolTip>
+                            <TextBlock>
+                                Game updates must be placed inside an "Updates" folder 
+                                <LineBreak /> 
+                                within the directory containing the games installer.
+                                <LineBreak />
+                                This option will detect these updates and add them to the game.
+                                <LineBreak />
+                                They will be installed automatically after the game is installed.
+                            </TextBlock>
+                        </TextBlock.ToolTip>
+                    <ContentControl Template="{StaticResource InfoTag}"/>
+                </TextBlock>
+                </StackPanel>
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal">
+                    <CheckBox x:Name="cbPaths" IsChecked="{Binding Settings.UsePaths}" Content="On Library Update, import new game installers added to the paths below." Margin="10,0,10,10"/>
+                    <TextBlock Margin="3,4">
+                        <TextBlock.ToolTip>
+                            <TextBlock>
+                                Selecting this option will search through the directories added
+                                <LineBreak /> 
+                                below for all subfolders.  Any folder containing a game
+                                <LineBreak />
+                                will be added to Playnite if it does not already have an entry.
+                            </TextBlock>
+                        </TextBlock.ToolTip>
+                        <ContentControl Template="{StaticResource InfoTag}" />
+                    </TextBlock>
+                </StackPanel>
 
-                <Grid Margin="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="0.4*"/>
-                        <ColumnDefinition Width="0.6*"/>
-                    </Grid.ColumnDefinitions>
-                    <!-- Column 0: Metadata Checkboxes (scrollable, grouped) -->
-                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel>
-                            <TextBlock Text="Select metadata elements to export:" FontWeight="Bold" Margin="0,0,0,10" TextWrapping="Wrap"/>
-                            <Button Content="Reset to Default" Command="{Binding ResetExportMetadataCommand}" Margin="0,0,0,10" Width="140" HorizontalAlignment="Left"/>
-                            <!-- Text Elements -->
-                            <TextBlock Text="Text Elements" FontWeight="Bold" Margin="0,10,0,5"/>
-                            <ItemsControl ItemsSource="{Binding Settings.ExportTextElements}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <!-- Status Elements -->
-                            <TextBlock Text="Status Elements" FontWeight="Bold" Margin="0,10,0,5"/>
-                            <ItemsControl ItemsSource="{Binding Settings.ExportStatusElements}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <!-- Scores -->
-                            <TextBlock Text="Scores" FontWeight="Bold" Margin="0,10,0,5"/>
-                            <ItemsControl ItemsSource="{Binding Settings.ExportScoreElements}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <!-- Dates & Times -->
-                            <TextBlock Text="Dates &amp; Times" FontWeight="Bold" Margin="0,10,0,5"/>
-                            <ItemsControl ItemsSource="{Binding Settings.ExportDateElements}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <!-- Media -->
-                            <TextBlock Text="Media" FontWeight="Bold" Margin="0,10,0,5"/>
-                            <ItemsControl ItemsSource="{Binding Settings.ExportMediaElements}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <!-- Scripts -->
-                            <TextBlock Text="Scripts" FontWeight="Bold" Margin="0,10,0,5"/>
-                            <ItemsControl ItemsSource="{Binding Settings.ExportScriptElements}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
-                    <!-- Column 1: Export Settings -->
-                    <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Top">
-                        <TextBlock Text="Location Setting" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <ComboBox SelectedItem="{Binding Settings.LocationSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
-                            <ComboBoxItem Content="Use Default Path"/>
-                            <ComboBoxItem Content="Prompt for Location"/>
-                        </ComboBox>
-                        <TextBlock Text="Default Metadata Path" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <DockPanel Margin="0,0,0,15">
-                            <TextBox Text="{Binding Settings.DefaultMetadataPath, Mode=TwoWay}" MinWidth="120" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                            <Button Content="Browse" MinWidth="60" VerticalAlignment="Center" Command="{Binding DefaultBrowseCommand}"/>
+                <ListBox x:Name="PathsBox" ItemsSource="{Binding Settings.InstallPaths}" Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="3" 
+                        Margin="10,0,20,0" MinHeight="100" MinWidth="200" VerticalAlignment="Center" SelectionMode="Extended"/>
+                <Button x:Name="AddPath" Content="Add Path" Margin="10,15,10,10" Command="{Binding AddPathCommand}" 
+                        Grid.Column="0" Grid.Row="5" HorizontalAlignment="Left" VerticalAlignment="Center" MinHeight="25"/>
+                <Button x:Name="RemovePath" Content="Remove Path" Margin="10,15,10,10" Command="{Binding RemovePathCommand}" 
+                        Grid.Column="0" Grid.Row="5" VerticalAlignment="Center" MinHeight="25" HorizontalAlignment="Right"
+                        CommandParameter="{Binding SelectedItems, ElementName=PathsBox}"/>
+                <StackPanel Grid.Row="6" Grid.ColumnSpan="3" Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Center" Margin="10" TextWrapping="Wrap" FontWeight="Bold" Text="Levenshtein Distance Matching" />
+                    <TextBlock Margin="0,3,0,0" VerticalAlignment="Center">
+                        <TextBlock.ToolTip>
+                            <TextBlock>
+                                Select the number to represent the % match you want in order to consider a path excluded.
+                                <LineBreak /> 
+                                For example, if you select 94, any path found where you already have a game with an
+                                <LineBreak />
+                                installer path that matches by 94% or higher would be excluded as long as it is the
+                                <LineBreak />
+                                only path that meets those requirements.  This is only comparing the 1st subfolder names,
+                                <LineBreak />
+                                so keep that in mind.  Between 90 and 95 will probably work for most people.
+                            </TextBlock>
+                        </TextBlock.ToolTip>
+                        <ContentControl Template="{StaticResource InfoTag}"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Margin="10" Grid.Row="7">
+                    <TextBlock VerticalAlignment="Center"
+                                Text="Percentage" 
+                                Margin="0,0,10,0" />
+                    <TextBox VerticalAlignment="Center"
+                                IsReadOnly="True" MinWidth="35"
+                                Margin="0,0,10,0"
+                                Text="{Binding Settings.Levenshtein}" />
+                    <Slider IsSnapToTickEnabled="True" Minimum="81"
+                            x:Name="LevenSlider"
+                            Width="200"
+                            VerticalAlignment="Center"
+                            TickFrequency="1"
+                            Value="{Binding Settings.Levenshtein}"
+                            Maximum="100" />
+                </StackPanel>
+                <Button x:Name="AddGames" Content="Import Games" Margin="0,0,10,0" Command="{Binding AddGamesCommand}" Grid.Column="2" Grid.Row="7" VerticalAlignment="Center" MinHeight="25" MinWidth="80" 
+                        HorizontalAlignment="Left" ToolTip="Import Games from the paths above using the set Levenshtein distance for matching."/>
+            </Grid>
+        </TabItem>
+        <TabItem BorderThickness="0.5">
+            <TabItem.Header>
+                Ignore/Replace
+            </TabItem.Header>
+            <Grid>
+                <!-- Instruction Text -->
+                <TextBlock Margin="15,10,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" TextWrapping="Wrap">
+                    List to replace strings from the folder name when setting the Name for a new Game
+                </TextBlock>
+
+                <GroupBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="10,46,10,26" >
+                    <GroupBox.Header>
+                        <TextBlock FontWeight="Bold">Replacement Rules</TextBlock>
+                    </GroupBox.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width=".5*"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width=".5*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Type" FontWeight="Bold" Grid.Column="0" Margin="10,0,0,0"/>
+                        <TextBlock Text="Pattern" FontWeight="Bold" Grid.Column="1" Margin="10,0,0,0"/>
+                        <TextBlock Text="Replacement" FontWeight="Bold" Grid.Column="2" Margin="10,0,0,0"/>
+
+                        <ItemsControl ItemsSource="{Binding Settings.ReplaceRules}" HorizontalAlignment="Stretch" Grid.Row="1" Grid.ColumnSpan="4">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width=".5*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width=".5*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox ItemsSource="{Binding DataContext.TypeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  SelectedItem="{Binding Type, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  Grid.Column="0"/>
+                                        <TextBox Text="{Binding Pattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Margin="5,0" Grid.Column="1"/>
+                                        <TextBox Text="{Binding Replacement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Margin="5,0" Grid.Column="2"/>
+                                        <Button Content="Remove" Command="{Binding DataContext.RemoveReplaceRuleCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                CommandParameter="{Binding}" Grid.Column="3"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Content="Add Rule" Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                                Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" 
+                                Height="30" Command="{Binding AddReplaceRuleCommand}"/>
+                    </Grid>
+
+                </GroupBox>
+            </Grid>
+        </TabItem>
+
+        <TabItem BorderThickness="0.5">
+            <TabItem.Header>
+                Other
+            </TabItem.Header>
+            <StackPanel>
+                <GroupBox Margin="10" VerticalAlignment="Top">
+                    <GroupBox.Header>
+                        <TextBlock FontWeight="Bold">Extraction Settings</TextBlock>
+                    </GroupBox.Header>
+                    <StackPanel>
+                        <GroupBox Margin="10" VerticalAlignment="Bottom">
+                            <GroupBox.Header>
+                                <TextBlock FontWeight="Bold">Tool Selection</TextBlock>
+                            </GroupBox.Header>
+                            <DockPanel>
+                                <RadioButton x:Name="RB7z" IsChecked="{Binding Settings.RB7z}" Margin="10"/>
+                                <Label Margin="0,0,5,0" VerticalAlignment="Center">7zip</Label>
+                                <RadioButton x:Name="RBRar" IsChecked="{Binding Settings.RBRar}" Margin="10"/>
+                                <Label Margin="0,0,5,0" VerticalAlignment="Center">WinRar</Label>
+                            </DockPanel>
+                        </GroupBox>
+                        <DockPanel Margin="10,0,0,20" VerticalAlignment="Bottom">
+                            <TextBlock Text="Path" FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBox x:Name="ArchivePath" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10" Text="{Binding Settings.ArchivePath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button x:Name="ArchiveBrowse" Content="Browse" Margin="10" Command="{Binding ArchiveBrowseCommand}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
                         </DockPanel>
-                        <TextBlock Text="Config" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <ComboBox SelectedItem="{Binding Settings.ConfigSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
-                            <ComboBoxItem Content="Use Default Metadata Set"/>
-                            <ComboBoxItem Content="Prompt for Metadata"/>
-                        </ComboBox>
                     </StackPanel>
-                </Grid>
-            </TabItem>
-        </TabControl>
-    
+                </GroupBox>
+                <GroupBox Margin="10">
+                    <GroupBox.Header>
+                        <TextBlock FontWeight="Bold">Default Install Root</TextBlock>
+                    </GroupBox.Header>
+                    <DockPanel Margin="10,0,0,20" VerticalAlignment="Bottom">
+                        <TextBlock VerticalAlignment="Center" Margin="0,10,5,0" DockPanel.Dock="Top" TextWrapping="Wrap">
+                            This is the default path used when installing games.
+                            <LineBreak />
+                            It is the path that will be opened when prompting for the game executable after install and when prompting for the game folder during extraction.
+                        </TextBlock>
+                        <TextBlock Text="Root Path" FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <TextBox x:Name="DefaultRoot" MinWidth="300" MaxWidth="450" VerticalAlignment="Center" Height="25" Margin="10" Text="{Binding Settings.DefaultRoot, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button x:Name="DefaultBrowse" Content="Browse" Margin="10" Command="{Binding DefaultBrowseCommand}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                    </DockPanel>
+                </GroupBox>
+            </StackPanel>
+        </TabItem>
+        <TabItem BorderThickness="0.5">
+            <TabItem.Header>
+                Export
+            </TabItem.Header>
+
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.4*"/>
+                    <ColumnDefinition Width="0.6*"/>
+                </Grid.ColumnDefinitions>
+                <!-- Column 0: Metadata Checkboxes (scrollable, grouped) -->
+                <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <TextBlock Text="Select metadata elements to export:" FontWeight="Bold" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                        <Button Content="Reset to Default" Command="{Binding ResetExportMetadataCommand}" Margin="0,0,0,10" Width="140" HorizontalAlignment="Left"/>
+                        <!-- Text Elements -->
+                        <TextBlock Text="Text Elements" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.ExportTextElements}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- Status Elements -->
+                        <TextBlock Text="Status Elements" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.ExportStatusElements}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- Scores -->
+                        <TextBlock Text="Scores" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.ExportScoreElements}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- Dates & Times -->
+                        <TextBlock Text="Dates &amp; Times" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.ExportDateElements}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- Media -->
+                        <TextBlock Text="Media" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.ExportMediaElements}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- Scripts -->
+                        <TextBlock Text="Scripts" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.ExportScriptElements}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- Column 1: Export Settings -->
+                <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Top">
+                    <TextBlock Text="Location Setting" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <ComboBox SelectedItem="{Binding Settings.LocationSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
+                        <ComboBoxItem Content="Use Default Path"/>
+                        <ComboBoxItem Content="Prompt for Location"/>
+                    </ComboBox>
+                    <TextBlock Text="Default Metadata Path" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <DockPanel Margin="0,0,0,15">
+                        <TextBox Text="{Binding Settings.DefaultMetadataPath, Mode=TwoWay}" MinWidth="120" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <Button Content="Browse" MinWidth="60" VerticalAlignment="Center" Command="{Binding DefaultBrowseCommand}"/>
+                    </DockPanel>
+                    <TextBlock Text="Config" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <ComboBox SelectedItem="{Binding Settings.ConfigSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
+                        <ComboBoxItem Content="Use Default Metadata Set"/>
+                        <ComboBoxItem Content="Prompt for Metadata"/>
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+        </TabItem>
+    </TabControl>
+
 </UserControl>

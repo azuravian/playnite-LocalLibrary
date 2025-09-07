@@ -1,5 +1,5 @@
 using LocalLibrary.Helpers;
-using Ookii.Dialogs.Wpf;
+using LocalLibrary.Models;
 using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
@@ -97,7 +97,8 @@ namespace LocalLibrary
                 var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
                     .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
                     .ToList();
-                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings, ignorelist);
+                var replacelist = Settings.Settings.ReplaceRules.Select(item => new ReplaceRule { Pattern = item.Pattern, Replacement = item.Replacement, Type = item.Type }).ToList();
+                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings, replacelist);
             }
             return addedGames;
         }

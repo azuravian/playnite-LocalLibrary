@@ -78,6 +78,7 @@
   <ItemGroup>
     <Compile Include="Converters.cs" />
     <Compile Include="GameSourceOption.cs" />
+    <Compile Include="Helpers\Migration.cs" />
     <Compile Include="Helpers\Utils.cs" />
     <Compile Include="MergedItem.cs" />
     <Compile Include="FindInstallers.cs" />
@@ -88,6 +89,7 @@
     </Compile>
     <Compile Include="LocalGameController.cs" />
     <Compile Include="LocalLibrary.cs" />
+    <Compile Include="Models\ReplaceRule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReportItem.cs" />
     <Compile Include="SelectionDialog.xaml.cs">

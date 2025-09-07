@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace LocalLibrary.Helpers
 {
@@ -39,6 +40,25 @@ namespace LocalLibrary.Helpers
             return sb.ToString();
         }
 
+        public static string CleanString(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
+
+            // Step 1: Replace '+' and '&' with "and"
+            string cleaned = input.Replace("+", "and").Replace("&", "and");
+
+            // Step 2: Remove all characters not A-Za-z0-9 or space
+            cleaned = Regex.Replace(cleaned, @"[^A-Za-z0-9\s]", "");
+
+            // Step 3: Replace multiple spaces with a single space
+            cleaned = Regex.Replace(cleaned, @"\s+", " ");
+
+            // Step 4: Trim leading and trailing spaces
+            cleaned = cleaned.Trim();
+
+            return cleaned;
+        }
     }
 
     public class CustomDialogs

@@ -1,4 +1,6 @@
-﻿using Playnite.SDK;
+﻿using LocalLibrary.Models;
+using LocalLibrary.Helpers;
+using Playnite.SDK;
 using Playnite.SDK.Data;
 using Playnite.SDK.Models;
 using System;
@@ -77,6 +79,15 @@ namespace LocalLibrary
 
         // Playnite serializes settings object to a JSON object and saves it as text file.
         // If you want to exclude some property from being saved then use `JsonDontSerialize` ignore attribute.
+
+        private ObservableCollection<ReplaceRule> _replaceRules = new ObservableCollection<ReplaceRule>();
+
+        public ObservableCollection<ReplaceRule> ReplaceRules 
+        { 
+            get => _replaceRules;
+            set => SetValue(ref _replaceRules, value);
+        }
+            
 
         private ObservableCollection<ExportMetadataItem> _exportMetadataItems = new ObservableCollection<ExportMetadataItem>();
         public ObservableCollection<ExportMetadataItem> ExportMetadataItems
@@ -169,6 +180,12 @@ namespace LocalLibrary
     {
         private readonly LocalLibrary plugin;
         private LocalLibrarySettings EditingClone { get; set; }
+
+        public ObservableCollection<string> TypeOptions { get; } = new ObservableCollection<string>
+        {
+            "String",
+            "Regex"
+        };  
 
         private LocalLibrarySettings settings;
         public LocalLibrarySettings Settings
@@ -330,6 +347,25 @@ namespace LocalLibrary
                 }
             }, (items) => items?.Any() ?? false);
 
+        public RelayCommand AddReplaceRuleCommand
+            => new RelayCommand(() =>
+            {
+                if (settings.ReplaceRules == null)
+                {
+                    settings.ReplaceRules = new ObservableCollection<ReplaceRule>();
+                }
+                settings.ReplaceRules.Add(new ReplaceRule { Pattern = string.Empty, Replacement = string.Empty });
+            });
+
+        public RelayCommand<ReplaceRule> RemoveReplaceRuleCommand
+            => new RelayCommand<ReplaceRule>((rule) =>
+            {
+                if (settings.ReplaceRules != null && rule != null)
+                {
+                    settings.ReplaceRules.Remove(rule);
+                }
+            });
+
         public RelayCommand ApplyPluginIdCommand => new RelayCommand(() =>
         {
             LocalLibrary.PluginIdUpdate(Settings.SelectedSources);
@@ -338,10 +374,8 @@ namespace LocalLibrary
         public RelayCommand AddGamesCommand => new RelayCommand(() =>
         {
             Finder addGames = new Finder();
-            var ignorelist = Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
-                .Concat(Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
-                .ToList();
-            addGames.FindInstallers(Settings.InstallPaths.ToList(), Settings, ignorelist);
+            var replacerules = Settings.ReplaceRules?.ToList() ?? new List<ReplaceRule>();
+            addGames.FindInstallers(Settings.InstallPaths.ToList(), Settings, replacerules);
         });
 
         public RelayCommand ArchiveBrowseCommand => new RelayCommand(() =>
@@ -393,6 +427,11 @@ namespace LocalLibrary
             EnsureExportMetadataGroups();
         }
 
+        public LocalLibrarySettingsViewModel() 
+        {
+            // Parameterless for design time support
+        }
+
         private void EnsureExportMetadataGroups()
         {
             // If any group is empty or has duplicates, reset all
@@ -419,6 +458,29 @@ namespace LocalLibrary
         {
             // Code executed when settings view is opened and user starts editing values.
             EditingClone = Serialization.GetClone(Settings);
+
+            // Only migrate if we *still* have old lists populated
+            if ((Settings.RegexList?.Any() ?? false) || (Settings.StringList?.Any() ?? false))
+            {
+                var rules = Migration.ConvertOldLists(Settings.RegexList, Settings.StringList);
+
+                // Merge with existing ReplaceRules if needed
+                if (Settings.ReplaceRules == null || Settings.ReplaceRules.Count == 0)
+                {
+                    Settings.ReplaceRules = rules;
+                }
+                else
+                {
+                    foreach (var rule in rules)
+                    {
+                        Settings.ReplaceRules.Add(rule);
+                    }
+                }
+
+                // Clear the old lists so they don't get written back to config.json
+                Settings.RegexList = new ObservableCollection<string>();
+                Settings.StringList = new ObservableCollection<string>();
+            }
 
             Settings.PluginSources = GetSources();
 
