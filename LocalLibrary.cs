@@ -87,6 +87,19 @@ namespace LocalLibrary
             }
         }
 
+        //public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
+        //{
+        //    yield return new GameMenuItem
+        //    {
+        //        Description = "Export Game Data",
+        //        MenuSection = "Local Library",
+        //        Action = (gmeArgs) =>
+        //        {
+        //            ExportData.GetExportData(gmeArgs);
+        //        }
+        //    };
+        //}
+
         public override IEnumerable<Game> ImportGames(LibraryImportGamesArgs args)
         {
             List<Game> addedGames = new List<Game>();

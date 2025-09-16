@@ -78,6 +78,7 @@
   <ItemGroup>
     <Compile Include="Converters.cs" />
     <Compile Include="GameSourceOption.cs" />
+    <Compile Include="Helpers\ExportData.cs" />
     <Compile Include="Helpers\Migration.cs" />
     <Compile Include="Helpers\Utils.cs" />
     <Compile Include="MergedItem.cs" />
