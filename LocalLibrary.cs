@@ -350,6 +350,7 @@ namespace LocalLibrary
             {
                 try
                 {
+                    logger.Debug($"Running Command: {command} {gameInstallArgs} in {driveLetter ?? gameImagePath}");
                     code = BuildAndRun(command, driveLetter, redirect, gameImagePath, gameInstallArgs);
                 }
                 catch (Exception ex)
@@ -491,6 +492,7 @@ namespace LocalLibrary
             
             try
             {
+                logger.Debug($"Attempting to run process with user privileges: {startInfoUser.FileName} {startInfoUser.Arguments}");
                 code = RunProcess(startInfoUser);
                 if (code == 2)
                 {
