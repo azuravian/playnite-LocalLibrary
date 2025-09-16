@@ -1,4 +1,6 @@
-﻿using Playnite.SDK;
+﻿using LocalLibrary.Models;
+using LocalLibrary.Helpers;
+using Playnite.SDK;
 using Playnite.SDK.Data;
 using Playnite.SDK.Models;
 using System;
@@ -6,9 +8,16 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
+using System.Windows.Input;
 
 namespace LocalLibrary
 {
+    public class ExportMetadataItem : ObservableObject
+    {
+        public string Name { get; set; }
+        private bool _isSelected;
+        public bool IsSelected { get => _isSelected; set => SetValue(ref _isSelected, value); }
+    }
     public class LocalLibrarySettings : ObservableObject
     {
         private bool _useactions = false;
@@ -70,12 +79,113 @@ namespace LocalLibrary
 
         // Playnite serializes settings object to a JSON object and saves it as text file.
         // If you want to exclude some property from being saved then use `JsonDontSerialize` ignore attribute.
+
+        private ObservableCollection<ReplaceRule> _replaceRules = new ObservableCollection<ReplaceRule>();
+
+        public ObservableCollection<ReplaceRule> ReplaceRules 
+        { 
+            get => _replaceRules;
+            set => SetValue(ref _replaceRules, value);
+        }
+            
+
+        private ObservableCollection<ExportMetadataItem> _exportMetadataItems = new ObservableCollection<ExportMetadataItem>();
+        public ObservableCollection<ExportMetadataItem> ExportMetadataItems
+        {
+            get => _exportMetadataItems;
+            set => SetValue(ref _exportMetadataItems, value);
+        }
+
+        // Grouped collections for Export tab
+        private ObservableCollection<ExportMetadataItem> _exportTextElements = new ObservableCollection<ExportMetadataItem>();
+        public ObservableCollection<ExportMetadataItem> ExportTextElements { get => _exportTextElements; set => SetValue(ref _exportTextElements, value); }
+
+        private ObservableCollection<ExportMetadataItem> _exportStatusElements = new ObservableCollection<ExportMetadataItem>();
+        public ObservableCollection<ExportMetadataItem> ExportStatusElements { get => _exportStatusElements; set => SetValue(ref _exportStatusElements, value); }
+
+        private ObservableCollection<ExportMetadataItem> _exportScoreElements = new ObservableCollection<ExportMetadataItem>();
+        public ObservableCollection<ExportMetadataItem> ExportScoreElements { get => _exportScoreElements; set => SetValue(ref _exportScoreElements, value); }
+
+        private ObservableCollection<ExportMetadataItem> _exportDateElements = new ObservableCollection<ExportMetadataItem>();
+        public ObservableCollection<ExportMetadataItem> ExportDateElements { get => _exportDateElements; set => SetValue(ref _exportDateElements, value); }
+
+        private ObservableCollection<ExportMetadataItem> _exportMediaElements = new ObservableCollection<ExportMetadataItem>();
+        public ObservableCollection<ExportMetadataItem> ExportMediaElements { get => _exportMediaElements; set => SetValue(ref _exportMediaElements, value); }
+
+        private ObservableCollection<ExportMetadataItem> _exportScriptElements = new ObservableCollection<ExportMetadataItem>();
+        public ObservableCollection<ExportMetadataItem> ExportScriptElements { get => _exportScriptElements; set => SetValue(ref _exportScriptElements, value); }
+
+        private string _locationSetting = "Use Default Path";
+        public string LocationSetting { get => _locationSetting; set => SetValue(ref _locationSetting, value); }
+
+        private string _defaultMetadataPath = string.Empty;
+        public string DefaultMetadataPath { get => _defaultMetadataPath; set => SetValue(ref _defaultMetadataPath, value); }
+
+        private string _configSetting = "Use Default Metadata Set";
+        public string ConfigSetting { get => _configSetting; set => SetValue(ref _configSetting, value); }
+
+        private void InitializeExportMetadataGroups()
+        {
+            ExportTextElements.Clear();
+            ExportStatusElements.Clear();
+            ExportScoreElements.Clear();
+            ExportDateElements.Clear();
+            ExportMediaElements.Clear();
+            ExportScriptElements.Clear();
+
+            string[] textElements = { "Name", "Sorting Name", "Series", "Description", "Region", "Platforms", "Categories", "Features", "Genres", "Links", "Tags", "Version", "Developers", "Publishers", "Source", "AgeRatings" };
+            string[] statusElements = { "CompletionStatus", "Hidden", "Favorite", "Enable HDR Support" };
+            string[] scoreElements = { "UserScore", "CriticScore", "CommunityScore" };
+            string[] dateElements = { "ReleaseDate", "Added", "Modified", "TimePlayed", "PlayCount", "LastActivity" };
+            string[] mediaElements = { "Icon", "CoverImage", "BackgroundImage", "Logo", "Manual" };
+            string[] scriptElements = { "GameStartedScript", "PostScript", "PreScript" };
+            foreach (var name in textElements) ExportTextElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in statusElements) ExportStatusElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in scoreElements) ExportScoreElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in dateElements) ExportDateElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in mediaElements) ExportMediaElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in scriptElements) ExportScriptElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+        }
+
+        public void ResetExportMetadataGroups()
+        {
+            ExportTextElements.Clear();
+            ExportStatusElements.Clear();
+            ExportScoreElements.Clear();
+            ExportDateElements.Clear();
+            ExportMediaElements.Clear();
+            ExportScriptElements.Clear();
+
+            string[] textElements = { "Name", "Sorting Name", "Series", "Description", "Region", "Platforms", "Categories", "Features", "Genres", "Links", "Tags", "Version", "Developers", "Publishers", "Source", "AgeRatings" };
+            string[] statusElements = { "CompletionStatus", "Hidden", "Favorite", "Enable HDR Support" };
+            string[] scoreElements = { "UserScore", "CriticScore", "CommunityScore" };
+            string[] dateElements = { "ReleaseDate", "Added", "Modified", "TimePlayed", "PlayCount", "LastActivity" };
+            string[] mediaElements = { "Icon", "CoverImage", "BackgroundImage", "Logo", "Manual" };
+            string[] scriptElements = { "GameStartedScript", "PostScript", "PreScript" };
+            foreach (var name in textElements) ExportTextElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in statusElements) ExportStatusElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in scoreElements) ExportScoreElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in dateElements) ExportDateElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in mediaElements) ExportMediaElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+            foreach (var name in scriptElements) ExportScriptElements.Add(new ExportMetadataItem { Name = name, IsSelected = false });
+        }
+
+        public LocalLibrarySettings()
+        {
+            // Do not auto-initialize grouped collections here
+        }
     }
 
     public class LocalLibrarySettingsViewModel : ObservableObject, ISettings
     {
         private readonly LocalLibrary plugin;
         private LocalLibrarySettings EditingClone { get; set; }
+
+        public ObservableCollection<string> TypeOptions { get; } = new ObservableCollection<string>
+        {
+            "String",
+            "Regex"
+        };  
 
         private LocalLibrarySettings settings;
         public LocalLibrarySettings Settings
@@ -237,46 +347,140 @@ namespace LocalLibrary
                 }
             }, (items) => items?.Any() ?? false);
 
+        public RelayCommand AddReplaceRuleCommand
+            => new RelayCommand(() =>
+            {
+                if (settings.ReplaceRules == null)
+                {
+                    settings.ReplaceRules = new ObservableCollection<ReplaceRule>();
+                }
+                settings.ReplaceRules.Add(new ReplaceRule { Pattern = string.Empty, Replacement = string.Empty });
+            });
+
+        public RelayCommand<ReplaceRule> RemoveReplaceRuleCommand
+            => new RelayCommand<ReplaceRule>((rule) =>
+            {
+                if (settings.ReplaceRules != null && rule != null)
+                {
+                    settings.ReplaceRules.Remove(rule);
+                }
+            });
+
+        public RelayCommand ApplyPluginIdCommand => new RelayCommand(() =>
+        {
+            LocalLibrary.PluginIdUpdate(Settings.SelectedSources);
+        });
+
+        public RelayCommand AddGamesCommand => new RelayCommand(() =>
+        {
+            Finder addGames = new Finder();
+            var replacerules = Settings.ReplaceRules?.ToList() ?? new List<ReplaceRule>();
+            addGames.FindInstallers(Settings.InstallPaths.ToList(), Settings, replacerules);
+        });
+
+        public RelayCommand ArchiveBrowseCommand => new RelayCommand(() =>
+        {
+            string archivepath = API.Instance.Dialogs.SelectFile("Unarchive Executable|*.exe");
+            if (!string.IsNullOrEmpty(archivepath))
+            {
+                Settings.ArchivePath = archivepath;
+                Settings.RBRar = archivepath.IndexOf("winrar", StringComparison.OrdinalIgnoreCase) >= 0;
+                Settings.RB7z = archivepath.IndexOf("7z", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+        });
+
+        public RelayCommand DefaultBrowseCommand => new RelayCommand(() =>
+        {
+            string defaultRoot = API.Instance.Dialogs.SelectFolder();
+            if (!string.IsNullOrEmpty(defaultRoot))
+            {
+                Settings.DefaultRoot = defaultRoot;
+            }
+        });
+
         public LocalLibrarySettingsViewModel(LocalLibrary plugin)
         {
-            // Injecting your plugin instance is required for Save/Load method because Playnite saves data to a location based on what plugin requested the operation.
             this.plugin = plugin;
-
-            // Load saved settings.
             var savedSettings = plugin.LoadPluginSettings<LocalLibrarySettings>();
-
-            // LoadPluginSettings returns null if not saved data is available.
             Settings = savedSettings ?? new LocalLibrarySettings();
 
             Settings.InstallPaths = Settings.InstallPaths is null
                 ? new ObservableCollection<string>()
                 : new ObservableCollection<string>(Settings.InstallPaths.OrderBy(x => x).ToList());
-
             Settings.RegexList = Settings.RegexList is null
                 ? new ObservableCollection<string>()
                 : new ObservableCollection<string>(Settings.RegexList.OrderBy(x => x).ToList());
-
             Settings.StringList = Settings.StringList is null
                 ? new ObservableCollection<string>()
                 : new ObservableCollection<string>(Settings.StringList.OrderBy(x => x).ToList());
-
             Settings.SelectedSources = Settings.SelectedSources is null
                 ? new ObservableCollection<GameSourceOption>()
                 : new ObservableCollection<GameSourceOption>(Settings.SelectedSources.OrderBy(x => x.Name).ToList());
-
             Settings.PluginSources = Settings.PluginSources is null
                 ? new ObservableCollection<GameSource>()
                 : new ObservableCollection<GameSource>(Settings.PluginSources.OrderBy(x => x.Name).ToList());
-
             Settings.Platforms = Settings.Platforms is null
                 ? new ObservableCollection<Platform>()
                 : new ObservableCollection<Platform>(Settings.Platforms.OrderBy(x => x.Name).ToList());
+
+            // Ensure grouped metadata collections are correct (no duplicates, all items present)
+            EnsureExportMetadataGroups();
+        }
+
+        public LocalLibrarySettingsViewModel() 
+        {
+            // Parameterless for design time support
+        }
+
+        private void EnsureExportMetadataGroups()
+        {
+            // If any group is empty or has duplicates, reset all
+            bool needsReset =
+                HasDuplicatesOrMissing(Settings.ExportTextElements, new[] { "Name", "Sorting Name", "Series", "Description", "Region", "Platforms", "Categories", "Features", "Genres", "Links", "Tags", "Version", "Developers", "Publishers", "Source", "AgeRatings" }) ||
+                HasDuplicatesOrMissing(Settings.ExportStatusElements, new[] { "CompletionStatus", "Hidden", "Favorite", "Enable HDR Support" }) ||
+                HasDuplicatesOrMissing(Settings.ExportScoreElements, new[] { "UserScore", "CriticScore", "CommunityScore" }) ||
+                HasDuplicatesOrMissing(Settings.ExportDateElements, new[] { "ReleaseDate", "Added", "Modified", "TimePlayed", "PlayCount", "LastActivity" }) ||
+                HasDuplicatesOrMissing(Settings.ExportMediaElements, new[] { "Icon", "CoverImage", "BackgroundImage", "Logo", "Manual" }) ||
+                HasDuplicatesOrMissing(Settings.ExportScriptElements, new[] { "GameStartedScript", "PostScript", "PreScript" });
+            if (needsReset)
+            {
+                Settings.ResetExportMetadataGroups();
+            }
+        }
+
+        private bool HasDuplicatesOrMissing(ObservableCollection<ExportMetadataItem> collection, string[] expectedNames)
+        {
+            var names = collection.Select(x => x.Name).ToList();
+            return names.Count != expectedNames.Length || names.Distinct().Count() != expectedNames.Length || expectedNames.Except(names).Any();
         }
 
         public void BeginEdit()
         {
             // Code executed when settings view is opened and user starts editing values.
             EditingClone = Serialization.GetClone(Settings);
+
+            // Only migrate if we *still* have old lists populated
+            if ((Settings.RegexList?.Any() ?? false) || (Settings.StringList?.Any() ?? false))
+            {
+                var rules = Migration.ConvertOldLists(Settings.RegexList, Settings.StringList);
+
+                // Merge with existing ReplaceRules if needed
+                if (Settings.ReplaceRules == null || Settings.ReplaceRules.Count == 0)
+                {
+                    Settings.ReplaceRules = rules;
+                }
+                else
+                {
+                    foreach (var rule in rules)
+                    {
+                        Settings.ReplaceRules.Add(rule);
+                    }
+                }
+
+                // Clear the old lists so they don't get written back to config.json
+                Settings.RegexList = new ObservableCollection<string>();
+                Settings.StringList = new ObservableCollection<string>();
+            }
 
             Settings.PluginSources = GetSources();
 
@@ -333,5 +537,30 @@ namespace LocalLibrary
             errors = new List<string>();
             return true;
         }
+
+        public RelayCommand ResetExportMetadataCommand => new RelayCommand(() =>
+        {
+            // List of unchecked items
+            var uncheckedItems = new HashSet<string>(new[] {
+                "Sorting Name", "Region", "Categories", "Version", "Source",
+                "Hidden", "Enable HDR Support",
+                "CriticScore", "CommunityScore",
+                "Added", "Modified", "TimePlayed", "PlayCount", "LastActivity",
+                "Manual",
+                "GameStartedScript", "PostScript", "PreScript"
+            });
+            foreach (var item in Settings.ExportTextElements)
+                item.IsSelected = !uncheckedItems.Contains(item.Name);
+            foreach (var item in Settings.ExportStatusElements)
+                item.IsSelected = !uncheckedItems.Contains(item.Name);
+            foreach (var item in Settings.ExportScoreElements)
+                item.IsSelected = !uncheckedItems.Contains(item.Name);
+            foreach (var item in Settings.ExportDateElements)
+                item.IsSelected = !uncheckedItems.Contains(item.Name);
+            foreach (var item in Settings.ExportMediaElements)
+                item.IsSelected = !uncheckedItems.Contains(item.Name);
+            foreach (var item in Settings.ExportScriptElements)
+                item.IsSelected = !uncheckedItems.Contains(item.Name);
+        });
     }
 }

@@ -1,8 +1,7 @@
-﻿using Playnite.SDK;
+﻿using LocalLibrary.Helpers;
+using LocalLibrary.Models;
+using Playnite.SDK;
 using Playnite.SDK.Models;
-
-using LocalLibrary.Helpers;
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,13 +12,14 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Forms.VisualStyles;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using API = Playnite.SDK.API;
 
 namespace LocalLibrary
 {
     internal class Finder
     {
-        private static ILogger logger = LogManager.GetLogger();
+        private static readonly ILogger logger = LogManager.GetLogger();
 
         public List<string> GetDirectories(string parentDir)
         {
@@ -159,7 +159,7 @@ namespace LocalLibrary
             return gameInstaller;
         }
 
-        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, Guid source, string platform, List<MergedItem> ignorelist)
+        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, Guid source, string platform, List<ReplaceRule> replacelist)
         {
             string gamename = Path.GetFileName(dir);
             string gameInstaller = GetMainInstaller(dir);
@@ -167,35 +167,42 @@ namespace LocalLibrary
             {
                 return gamesAdded;
             }
-            if (ignorelist != null)
+            if (replacelist != null)
             {
-                foreach (MergedItem item in ignorelist)
+                foreach (ReplaceRule item in replacelist)
                 {
-                    var type = item.Source;
-                    var value = item.Value;
+                    var type = item.Type;
+                    var pattern = item.Pattern;
+                    var replacement = item.Replacement ?? string.Empty;
+
+                    // Skip rules where pattern is empty
+                    if (string.IsNullOrEmpty(pattern))
+                        continue;
 
                     if (type == "String")
                     {
-                        if (gamename.Contains(value))
+                        if (gamename.Contains(pattern))
                         {
-                            gamename = gamename.Replace(value, "");
+                            gamename = gamename.Replace(pattern, replacement);
                         }
                     }
                     else if (type == "Regex")
                     {
-                        if (Regex.IsMatch(gamename, value))
+                        if (Regex.IsMatch(gamename, pattern))
                         {
-                            gamename = Regex.Replace(gamename, value, "");
+                            gamename = Regex.Replace(gamename, pattern, replacement);
                         }
                     }
-                    gamename = Regex.Replace(gamename, @"\s+", " ").Trim();
                 }
+
+                // Normalize whitespace once at the end
+                gamename = Regex.Replace(gamename, @"\s+", " ").Trim();
             }
 
             IEnumerable<Game> games = API.Instance.Database.Games
                     ?.Where(game => game != null && game.Source != null && game.Source.Id == source)
                     ?? Enumerable.Empty<Game>();
-            var matchingGame = games.FirstOrDefault(game => game.Name.Replace(": ", " - ") == gamename);
+            var matchingGame = games.FirstOrDefault(game => StringExtensions.CleanString(game.Name).ToLowerInvariant() == StringExtensions.CleanString(gamename).ToLowerInvariant());
             if (matchingGame != null)
             {
                 if (useActions)
@@ -386,7 +393,7 @@ namespace LocalLibrary
             return gameUpdates.Count - 1;
         }
 
-        public List<Game> FindInstallers(List<string> installPaths, LocalLibrarySettings settings, List<MergedItem> ignorelist)
+        public List<Game> FindInstallers(List<string> installPaths, LocalLibrarySettings settings, List<ReplaceRule> replacelist)
         {
             bool useActions = settings.UseActions;
             int lpercent = settings.Levenshtein;
@@ -524,14 +531,14 @@ namespace LocalLibrary
                                     dialog.ShowDialog();
                                     if (dialog.IsCancelled)
                                     {
-                                        gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, ignorelist);
+                                        gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, replacelist);
                                     }
                                 });
                             }
                         }
                         else
                         {
-                            gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, ignorelist);
+                            gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, replacelist);
                         }
                     }
 
