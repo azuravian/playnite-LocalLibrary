@@ -76,3 +76,11 @@ Packages:
     Changelog:
       - Fix Root Path Issues by @azuravian in https://github.com/azuravian/playnite-LocalLibrary/pull/47
       - Full Changelog - https://github.com/azuravian/playnite-LocalLibrary/compare/v1.8.1...v1.8.2
+  
+  - Version: 1.8.3
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2025-09-15
+    PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/v1.8.3/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_8_3.pext
+    Changelog:
+      - Added export options for CSV and JSON
+      - Full Changelog - https://github.com/azuravian/playnite-LocalLibrary/compare/v1.8.2...v1.8.3
