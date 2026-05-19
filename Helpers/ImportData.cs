@@ -60,7 +60,7 @@ namespace LocalLibrary.Helpers
 
                     var allStatuses = API.Instance.Database.CompletionStatuses;
 
-                    var status = allStatuses.FirstOrDefault(s => string.Equals(s.Name, savedName, StringComparison.OrdinalIgnoreCase));
+                    var status = allStatuses.FirstOrDefault(s => string.Equals(s.Name, completionStatusValue, StringComparison.OrdinalIgnoreCase));
                     
                     if (status != null)
                     {
