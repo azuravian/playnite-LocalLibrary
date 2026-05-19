@@ -280,11 +280,17 @@ namespace LocalLibrary.Helpers
                             var list = new ObservableCollection<Link>();
                             if (value is IEnumerable<object> dicts)
                             {
-                                foreach (var item in dicts.OfType<Dictionary<string, object>>())
+                                foreach (var item in dicts)
                                 {
-                                    if (item.TryGetValue("name", out var name) && item.TryGetValue("url", out var url))
+                                    if (item is JObject jObj)
                                     {
-                                        list.Add(new Link(name?.ToString() ?? "", url?.ToString() ?? ""));
+                                        var name = jObj["name"]?.ToString();
+                                        var url = jObj["url"]?.ToString();
+
+                                        if (!string.IsNullOrEmpty(name)
+                                        {
+                                            list.Add(new Link(name, url));
+                                        }
                                     }
                                 }
                             }
