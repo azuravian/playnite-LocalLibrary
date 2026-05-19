@@ -58,10 +58,10 @@ namespace LocalLibrary.Helpers
                 {
                     logger.Info($"CompletionStatus type {completionStatusValue?.GetType().FullName}");
 
-                    var allStatuses = PlayniteApi.Database.CompletionStatuses;
+                    var allStatuses = API.Instance.Database.CompletionStatuses;
 
-                    var status = allStatuses.FirstOrDefault(s => s.Name.Equals(completionStatusValue, StringComparison.OrdinalIgnoreCase));
-
+                    var status = allStatuses.FirstOrDefault(s => string.Equals(s.Name, savedName, StringComparison.OrdinalIgnoreCase));
+                    
                     if (status != null)
                     {
                         game.CompletionStatusId = status.Id;
@@ -69,10 +69,10 @@ namespace LocalLibrary.Helpers
                     else
                     {
                         // Create a new status
-                        var newStatus = new CompletionStatus(completionStatusValue);
+                        var newStatus = new CompletionStatus((string)completionStatusValue);
                     
                         // Add it to the database
-                        PlayniteApi.Database.CompletionStatuses.Add(newStatus);
+                        API.Instance.Database.CompletionStatuses.Add(newStatus);
                     
                         // Assign the new ID
                         game.CompletionStatusId = newStatus.Id;
