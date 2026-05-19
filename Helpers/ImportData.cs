@@ -54,6 +54,31 @@ namespace LocalLibrary.Helpers
                     game.Notes = notesValue?.ToString();
                 }
 
+                if (metadata.TryGetValue("CompletionStatus", out var completionStatusValue))
+                {
+                    logger.Info($"CompletionStatus type {completionStatusValue?.GetType().FullName}");
+
+                    var allStatuses = PlayniteApi.Database.CompletionStatuses;
+
+                    var status = allStatuses.FirstOrDefault(s => s.Name.Equals(completionStatusValue, StringComparison.OrdinalIgnoreCase));
+
+                    if (status != null)
+                    {
+                        game.CompletionStatusId = status.Id;
+                    }
+                    else
+                    {
+                        // Create a new status
+                        var newStatus = new CompletionStatus(completionStatusValue);
+                    
+                        // Add it to the database
+                        PlayniteApi.Database.CompletionStatuses.Add(newStatus);
+                    
+                        // Assign the new ID
+                        game.CompletionStatusId = newStatus.Id;
+                    }
+                }
+
                 if (metadata.TryGetValue("EnableSystemHdr", out var HdrValue))
                 {
                     logger.Info($"EnableSystemHdr type: {HdrValue?.GetType().FullName}");
