@@ -1,5 +1,6 @@
 using LocalLibrary.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using System;
@@ -287,7 +288,7 @@ namespace LocalLibrary.Helpers
                                         var name = jObj["name"]?.ToString();
                                         var url = jObj["url"]?.ToString();
 
-                                        if (!string.IsNullOrEmpty(name)
+                                        if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(url))
                                         {
                                             list.Add(new Link(name, url));
                                         }
