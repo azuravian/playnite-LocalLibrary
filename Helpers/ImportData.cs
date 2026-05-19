@@ -110,7 +110,8 @@ namespace LocalLibrary.Helpers
                 var iconFile = Directory.EnumerateFiles(metadataDir, "Icon*").FirstOrDefault();
                 if (!string.IsNullOrEmpty(iconFile) && File.Exists(iconFile))
                 {
-                    game.Icon = ImportMediaFile(iconFile, game.Id);
+                    logger.Info($"Assigning Icon = {iconFile}");
+                    game.Icon = iconFile;
                     logger.Info($"Imported icon for game '{game.Name}'");
                 }
 
@@ -153,32 +154,6 @@ namespace LocalLibrary.Helpers
             catch (Exception ex)
             {
                 logger.Error(ex, $"Failed to import media files for game '{game.Name}': {ex.Message}");
-            }
-        }
-
-        private static string ImportMediaFile(string sourceFile, Guid gameId)
-        {
-            try
-            {
-                var libraryFilesPath = Path.Combine(API.Instance.Paths.ApplicationPath, "library", "files");
-                Directory.CreateDirectory(libraryFilesPath);
-
-                // Create a unique filename using game ID and extension
-                var ext = Path.GetExtension(sourceFile);
-                var newFileName = $"{gameId}{ext}";
-                var destPath = Path.Combine(libraryFilesPath, newFileName);
-
-                // Copy the file
-                File.Copy(sourceFile, destPath, true);
-                logger.Debug($"Imported media file from '{sourceFile}' to '{destPath}'");
-
-                // Return the relative path format that Playnite expects
-                return newFileName;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, $"Failed to import media file '{sourceFile}' for game ID '{gameId}'");
-                return null;
             }
         }
 
