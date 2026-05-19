@@ -7,8 +7,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Forms.VisualStyles;
@@ -53,7 +55,7 @@ namespace LocalLibrary
         public Tuple<string, string, List<Dictionary<String, String>>> GetActionsRoms(Game game, LocalLibrarySettings settings)
         {
             bool actions = settings.UseActions;
-            string gameImagePath = null;
+            string gameInstallerPath = null;
             string gameInstallArgs = null;
             List<GameAction> gameActions = new List<GameAction>();
             List<GameRom> gameRoms = new List<GameRom>();
@@ -63,9 +65,9 @@ namespace LocalLibrary
                 gameActions = game.GameActions.ToList();
                 foreach (GameAction ga in gameActions)
                 {
-                    if (gameImagePath == null && (ga.Name == "Install" || ga.Name == "Installer"))
+                    if (gameInstallerPath == null && (ga.Name == "Install" || ga.Name == "Installer"))
                     {
-                        gameImagePath = API.Instance.ExpandGameVariables(game, ga).Path;
+                        gameInstallerPath = API.Instance.ExpandGameVariables(game, ga).Path;
                         gameInstallArgs = API.Instance.ExpandGameVariables(game, ga).Arguments;
                     }
                     else
@@ -78,10 +80,10 @@ namespace LocalLibrary
                         installers.Add(installDict);
                     }
                 }
-                if (String.IsNullOrEmpty(gameImagePath) && gameActions.Count > 0)
+                if (String.IsNullOrEmpty(gameInstallerPath) && gameActions.Count > 0)
                 {
-                    gameImagePath = API.Instance.ExpandGameVariables(game, gameActions[0]).Path;
-                    installers.Remove(installers.FirstOrDefault(a => a["Path"] == gameImagePath));
+                    gameInstallerPath = API.Instance.ExpandGameVariables(game, gameActions[0]).Path;
+                    installers.Remove(installers.FirstOrDefault(a => a["Path"] == gameInstallerPath));
                 }
             }
             else if (!actions && game.Roms != null)
@@ -90,9 +92,9 @@ namespace LocalLibrary
                 foreach (GameRom gr in gameRoms)
                 {
                     //Take the ROM with the name Install or Installer and use it as the installer
-                    if (gameImagePath == null && (gr.Name == "Install" || gr.Name == "Installer"))
+                    if (gameInstallerPath == null && (gr.Name == "Install" || gr.Name == "Installer"))
                     {
-                        gameImagePath = gr.Path;
+                        gameInstallerPath = gr.Path;
                     }
                     else
                     {
@@ -104,18 +106,18 @@ namespace LocalLibrary
                         installers.Add(installDict);
                     }
                 }
-                if (String.IsNullOrEmpty(gameImagePath) && gameRoms.Count > 0)
+                if (String.IsNullOrEmpty(gameInstallerPath) && gameRoms.Count > 0)
                 {
                     //If no Install or Installer ROM is found, use the first ROM in the list
-                    gameImagePath = gameRoms[0].Path;
-                    installers.Remove(installers.FirstOrDefault(a => a["Path"] == gameImagePath));
+                    gameInstallerPath = gameRoms[0].Path;
+                    installers.Remove(installers.FirstOrDefault(a => a["Path"] == gameInstallerPath));
                 }
             }
-            if (String.IsNullOrEmpty(gameImagePath))
+            if (String.IsNullOrEmpty(gameInstallerPath))
             {
-                gameImagePath = API.Instance.ExpandGameVariables(game, game.InstallDirectory);
+                gameInstallerPath = API.Instance.ExpandGameVariables(game, game.InstallDirectory);
             }
-            return Tuple.Create(gameImagePath, gameInstallArgs, installers);
+            return Tuple.Create(gameInstallerPath, gameInstallArgs, installers);
         }
 
         public string GetMainInstaller(string dir)
@@ -159,14 +161,22 @@ namespace LocalLibrary
             return gameInstaller;
         }
 
-        public List<Game> AddGame(List<Game> gamesAdded, string dir, bool useActions, Guid source, string platform, List<ReplaceRule> replacelist)
+        public List<Game> AddGame(List<Game> gamesAdded, string dir, LocalLibrarySettings settings, Guid source, string platform, List<ReplaceRule> replacelist)
         {
+            bool useActions = settings.UseActions;
             string gamename = Path.GetFileName(dir);
             string gameInstaller = GetMainInstaller(dir);
             if (gameInstaller == "")
             {
                 return gamesAdded;
             }
+
+            // Extract metadata from folder name first
+            var extractedMetadata = MetadataExtractor.ExtractFromName(gamename, settings.MetadataExtractionRules);
+            
+            // Use the cleaned name for further processing
+            gamename = extractedMetadata.CleanedName;
+
             if (replacelist != null)
             {
                 foreach (ReplaceRule item in replacelist)
@@ -203,8 +213,12 @@ namespace LocalLibrary
                     ?.Where(game => game != null && game.Source != null && game.Source.Id == source)
                     ?? Enumerable.Empty<Game>();
             var matchingGame = games.FirstOrDefault(game => StringExtensions.CleanString(game.Name).ToLowerInvariant() == StringExtensions.CleanString(gamename).ToLowerInvariant());
+            
             if (matchingGame != null)
             {
+                // Game found - update installer and apply extracted metadata
+                logger.Info($"Found existing game '{matchingGame.Name}' for directory '{dir}'");
+
                 if (useActions)
                 {
                     GameAction action = new GameAction();
@@ -221,9 +235,12 @@ namespace LocalLibrary
                     action.Name = "Install";
                     action.TrackingMode = TrackingMode.Default;
                     action.IsPlayAction = false;
-                    matchingGame.GameActions = new ObservableCollection<GameAction>();
+                    
+                    if (matchingGame.GameActions == null)
+                    {
+                        matchingGame.GameActions = new ObservableCollection<GameAction>();
+                    }
                     matchingGame.GameActions.AddMissing(action);
-                    API.Instance.Database.Games.Update(matchingGame);
                 }
                 else
                 {
@@ -232,23 +249,41 @@ namespace LocalLibrary
                         Name = "Install",
                         Path = gameInstaller
                     };
-                    matchingGame.Roms = new ObservableCollection<GameRom>();
+                    
+                    if (matchingGame.Roms == null)
+                    {
+                        matchingGame.Roms = new ObservableCollection<GameRom>();
+                    }
                     matchingGame.Roms.AddMissing(installRom);
-                    API.Instance.Database.Games.Update(matchingGame);
                 }
 
+                // Apply extracted metadata to existing game
+                if (extractedMetadata.Metadata.Any())
+                {
+                    logger.Info($"Applying extracted metadata to existing game '{matchingGame.Name}'");
+                    MetadataExtractor.ApplyMetadataToGame(matchingGame, extractedMetadata, API.Instance);
+                }
+
+                API.Instance.Database.Games.Update(matchingGame);
                 return gamesAdded;
             }
 
-            Game newGame = new Game
+            // Game not found - create new game with metadata
+            logger.Info($"Creating new game '{gamename}' for directory '{dir}'");
+
+            Game newGame;
+            var installDir = Path.GetDirectoryName(gameInstaller);
+            var metaDataPath = Path.Combine(installDir, settings.MetadataRelPath, $"{gamename}_metadata.json");
+            
+            newGame = new Game
             {
                 Name = gamename,
                 Added = DateTime.Now,
-                PluginId = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5"),
+                PluginId = LocalLibrary.PluginId,
                 SourceId = source,
                 PlatformIds = new List<Guid> { API.Instance.Database.Platforms.FirstOrDefault(a => a.Name == platform)?.Id ?? Guid.Empty }
             };
-
+            
             if (useActions)
             {
                 GameAction action = new GameAction();
@@ -278,6 +313,14 @@ namespace LocalLibrary
                 newGame.Roms = new ObservableCollection<GameRom>();
                 newGame.Roms.AddMissing(installRom);
             }
+
+            // Apply extracted metadata to new game
+            if (extractedMetadata.Metadata.Any())
+            {
+                logger.Info($"Applying extracted metadata to new game '{gamename}'");
+                MetadataExtractor.ApplyMetadataToGame(newGame, extractedMetadata, API.Instance);
+            }
+
             gamesAdded.Add(newGame);
             return gamesAdded;
         }
@@ -402,7 +445,6 @@ namespace LocalLibrary
             bool findupdates = settings.FindUpdates;
 
             List<ReportItem> reportItems = new List<ReportItem>();
-            List<Game> NoItems = new List<Game>();
             int totalupdates = 0;
             Guid primarysourceid = sources.FirstOrDefault(a => a.IsPrimary)?.Id ?? Guid.Empty;
             if (primarysourceid == Guid.Empty)
@@ -422,7 +464,6 @@ namespace LocalLibrary
                 string gameImagePath = GetActionsRoms(game, settings).Item1;
                 if (String.IsNullOrEmpty(gameImagePath))
                 {
-                    NoItems.Add(game);
                     continue;
                 }
                 List<string> exts = new List<string> { ".exe", ".iso", ".rar", ".zip", ".7z", ".bat", ".ps", ".ps1" };
@@ -531,23 +572,14 @@ namespace LocalLibrary
                                     dialog.ShowDialog();
                                     if (dialog.IsCancelled)
                                     {
-                                        gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, replacelist);
+                                        gamesAdded = AddGame(gamesAdded, dir, settings, primarysourceid, platform, replacelist);
                                     }
                                 });
                             }
                         }
                         else
                         {
-                            gamesAdded = AddGame(gamesAdded, dir, useActions, primarysourceid, platform, replacelist);
-                        }
-                    }
-
-
-                    foreach (Game game in NoItems)
-                    {
-                        if (!gameInstallDirs.Any(dir => dir.Contains(game.Name, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            continue;
+                            gamesAdded = AddGame(gamesAdded, dir, settings, primarysourceid, platform, replacelist);
                         }
                     }
 

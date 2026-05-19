@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
+using System.Runtime;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -28,11 +29,12 @@ namespace LocalLibrary
 
         private static readonly ILogger logger = LogManager.GetLogger();
 
-        public LocalLibrarySettingsViewModel Settings { get; set; }
+        public LocalLibrarySettingsViewModel SettingsViewModel { get; set; }
 
         public LocalLibrarySettingsView SettingsView { get; private set; }
 
-        public override Guid Id { get; } = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5");
+        public static readonly Guid PluginId = Guid.Parse("2d01017d-024e-444d-80d3-f62f5be3fca5");
+        public override Guid Id { get; } = PluginId;
 
         public override string Name => "Local Library";
 
@@ -40,7 +42,7 @@ namespace LocalLibrary
 
         public LocalLibrary(IPlayniteAPI api) : base(api)
         {
-            Settings = new LocalLibrarySettingsViewModel(this);
+            SettingsViewModel = new LocalLibrarySettingsViewModel(this);
             Properties = new LibraryPluginProperties
             {
                 HasCustomizedGameImport = true,
@@ -50,7 +52,7 @@ namespace LocalLibrary
 
         public override ISettings GetSettings(bool firstRunSettings)
         {
-            return Settings;
+            return SettingsViewModel;
         }
 
         public override UserControl GetSettingsView(bool firstRunSettings)
@@ -80,38 +82,130 @@ namespace LocalLibrary
 
         public override void OnLibraryUpdated(OnLibraryUpdatedEventArgs args)
         {
-            if (Settings.Settings.AutoUpdate == true)
+            if (SettingsViewModel.Settings.AutoUpdate == true)
             {
-                ObservableCollection<GameSourceOption> sources = Settings.Settings.SelectedSources;
+                ObservableCollection<GameSourceOption> sources = SettingsViewModel.Settings.SelectedSources;
                 PluginIdUpdate(sources);
             }
+
+            if (SettingsViewModel.Settings.ImportMetadataOnAdd == true)
+            {
+                var progressTitle = "Importing Metadata...";
+                var progressOptions = new GlobalProgressOptions(progressTitle, true)
+                {
+                    IsIndeterminate = false
+                };
+                PlayniteApi.Dialogs.ActivateGlobalProgress((a) =>
+                {
+                    var games = PlayniteApi.Database.Games
+                        .Where(x => x.Added != null && x.Added > SettingsViewModel.Settings.LastAutoUpdateTime && x.PluginId == this.Id)
+                        .ToList(); // Convert to list to avoid multiple enumeration
+                    
+                    a.ProgressMaxValue = games.Count();
+                    
+                    foreach (var game in games)
+                    {
+                        a.CurrentProgressValue++;
+                        a.Text = $"{progressTitle}\n\n{a.CurrentProgressValue}/{games.Count()}\n{game.Name}";
+                        
+                        if (a.CancelToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        try
+                        {
+                            Finder iFinder = new Finder();
+                            var gameInstaller = iFinder.GetActionsRoms(game, SettingsViewModel.Settings).Item1;
+                            var gameDir = "";
+                            
+                            if (!File.Exists(gameInstaller))
+                            {
+                                if (!Directory.Exists(gameInstaller))
+                                {
+                                    logger.Debug($"Skipping metadata import for '{game.Name}' - installer path not found: {gameInstaller}");
+                                    continue; // Skip this game but continue with others
+                                }
+                                else
+                                { 
+                                    gameDir = gameInstaller;
+                                }
+                            }
+                            else
+                            {
+                                gameDir = Path.GetDirectoryName(gameInstaller);
+                            }
+
+                            var safeName = $"{StringExtensions.CleanString(game.Name)}_metadata.json";
+                            var metadataPath = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath, safeName);
+                            ImportData.ImportExtra(game, metadataPath);
+                            logger.Debug($"Successfully imported metadata for {game.Name}.");
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, $"Failed to export metadata for game '{game.Name}': {ex.Message}");
+                            // Continue with next game even if this one fails
+                        }
+                    }
+                }, progressOptions);
+            }
+            
+            SettingsViewModel.Settings.LastAutoUpdateTime = DateTime.Now;
+            this.SavePluginSettings(SettingsViewModel.Settings);            
         }
 
-        //public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
-        //{
-        //    yield return new GameMenuItem
-        //    {
-        //        Description = "Export Game Data",
-        //        MenuSection = "Local Library",
-        //        Action = (gmeArgs) =>
-        //        {
-        //            ExportData.GetExportData(gmeArgs);
-        //        }
-        //    };
-        //}
+        public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
+        {
+            Finder iFinder = new Finder();
+            var game = args.Games.FirstOrDefault();
+            var gameInstaller = iFinder.GetActionsRoms(game, SettingsViewModel.Settings).Item1;
+            var gameDir = Path.GetDirectoryName(gameInstaller);
+            var exportDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+            yield return new GameMenuItem
+            {
+                Description = "Export Game Data",
+                MenuSection = "Local Library",
+                Action = (gmeArgs) =>
+                {
+                    ExportData.ExportGameData(SettingsViewModel.Settings, game, exportDir);
+                }
+            };
+
+            yield return new GameMenuItem
+            {
+                Description = "Import Game Data",
+                MenuSection = "Local Library",
+                Action = (gmeArgs) =>
+                {
+                    var importFilePath = Path.Combine(exportDir, $"{StringExtensions.CleanString(game.Name)}_metadata.json");
+                    if (File.Exists(importFilePath))
+                    {
+                        var jsonData = File.ReadAllText(importFilePath);
+                        var data = ImportData.ImportFromJson(game.Name, jsonData);
+                        var importDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                        ImportData.ImportMetadataToGame(SettingsViewModel.Settings, game, data, importDir);
+                        API.Instance.Database.Games.Update(game);
+                    }
+                    else
+                    {
+                        API.Instance.Dialogs.ShowErrorMessage($"Import file not found: {importFilePath}", "Import Failed");
+                    }
+                }
+            };
+        }
 
         public override IEnumerable<Game> ImportGames(LibraryImportGamesArgs args)
         {
             List<Game> addedGames = new List<Game>();
-            if (Settings.Settings.UsePaths)
+            if (SettingsViewModel.Settings.UsePaths)
             {
                 Finder addGames = new Finder();
-                var installPaths = Settings.Settings.InstallPaths;
-                var ignorelist = Settings.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
-                    .Concat(Settings.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
+                var installPaths = SettingsViewModel.Settings.InstallPaths;
+                var ignorelist = SettingsViewModel.Settings.RegexList.Select(item => new MergedItem { Value = item, Source = "Regex" })
+                    .Concat(SettingsViewModel.Settings.StringList.Select(item => new MergedItem { Value = item, Source = "String" }))
                     .ToList();
-                var replacelist = Settings.Settings.ReplaceRules.Select(item => new ReplaceRule { Pattern = item.Pattern, Replacement = item.Replacement, Type = item.Type }).ToList();
-                addedGames = addGames.FindInstallers(installPaths.ToList(), Settings.Settings, replacelist);
+                var replacelist = SettingsViewModel.Settings.ReplaceRules.Select(item => new ReplaceRule { Pattern = item.Pattern, Replacement = item.Replacement, Type = item.Type }).ToList();
+                addedGames = addGames.FindInstallers(installPaths.ToList(), SettingsViewModel.Settings, replacelist);
             }
             return addedGames;
         }
@@ -170,7 +264,8 @@ namespace LocalLibrary
         //Prompt user for installation location and create Play action
         public void GameSelect(Game selectedGame, LocalInstallController install)
         {
-            string gameExe = CustomDialogs.SelectFileWithDefault(Settings.Settings.DefaultRoot, "Executables | *.exe", API.Instance.Dialogs, selectedGame);
+
+            string gameExe = CustomDialogs.SelectFileWithDefault(SettingsViewModel.Settings.DefaultRoot, "Executables | *.exe", API.Instance.Dialogs, selectedGame);
 
             if (!string.IsNullOrEmpty(gameExe))
             {
@@ -244,7 +339,7 @@ namespace LocalLibrary
                 return "failed";
             }
             string extractpath;
-            string defaultRoot = Settings.Settings.DefaultRoot;
+            string defaultRoot = SettingsViewModel.Settings.DefaultRoot;
             
             if (!defaultRoot.EndsWith("\\"))
             {
@@ -252,11 +347,11 @@ namespace LocalLibrary
             }
             extractpath = CustomDialogs.SelectFolderWithDefault(defaultRoot, API.Instance.Dialogs);
             
-            if (Settings.Settings.RB7z)
+            if (SettingsViewModel.Settings.RB7z)
             {
                 gameInstallArgs = " x -o" + String.Concat("\"", extractpath, "\"") + " " + String.Concat("\"", gameImagePath, "\"");
             }
-            else if (Settings.Settings.RBRar)
+            else if (SettingsViewModel.Settings.RBRar)
             {
                 gameInstallArgs = " x " + String.Concat("\"", gameImagePath, "\"") + " -op" + String.Concat("\"", extractpath, "\"");
             }
@@ -280,7 +375,7 @@ namespace LocalLibrary
             bool redirect = false;
             Finder finder = new Finder();
 
-            var results = finder.GetActionsRoms(game, Settings.Settings);
+            var results = finder.GetActionsRoms(game, SettingsViewModel.Settings);
             string gameImagePath = results.Item1;
             string gameInstallArgs = results.Item2;
             List<Dictionary<string, string>> extras = results.Item3;
@@ -290,7 +385,7 @@ namespace LocalLibrary
                 var response = MessageBox.Show("The installation path is empty.\nDo you want to specify the location of the installation media?", "No Installation Path", MessageBoxButton.YesNo);
                 if (response == MessageBoxResult.Yes)
                 {
-                    gameImagePath = CustomDialogs.SelectFolderWithDefault(Settings.Settings.DefaultRoot, API.Instance.Dialogs);
+                    gameImagePath = CustomDialogs.SelectFolderWithDefault(SettingsViewModel.Settings.DefaultRoot, API.Instance.Dialogs);
                 }
             }
             else
@@ -316,7 +411,7 @@ namespace LocalLibrary
                 else if (archives.Any(x => gameImagePath.ToLower().EndsWith(x)))
                 {
                     archive = true;
-                    command = Settings.Settings.ArchivePath;
+                    command = SettingsViewModel.Settings.ArchivePath;
                     gameInstallArgs = GetArchiveCommand(gameImagePath, gameInstallArgs);
                     if (gameInstallArgs == "failed")
                     {
@@ -426,7 +521,6 @@ namespace LocalLibrary
             }
         }
 
-
         // Extracted method to run the command with proper arguments
         private static int BuildAndRun(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
         {
@@ -508,7 +602,7 @@ namespace LocalLibrary
                     }
                 }
             }
-            catch (Win32Exception ex) when (ex.NativeErrorCode == 5) // Access Denied
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 5 || ex.NativeErrorCode == 740) // Access Denied
             {
                 logger.Warn("Access denied, trying to run as administrator.");
                 try
@@ -743,7 +837,7 @@ namespace LocalLibrary
                             string unmessage = "";
                             var dir = new DirectoryInfo(installDir);
                             dir.Delete(true);
-                            if (Settings.Settings.RemovePlay)
+                            if (SettingsViewModel.Settings.RemovePlay)
                             {
                                 Delete_PlayActions(actions, selectedGame);
                                 unmessage = "The installation folder was successfully removed.  The game has had its play action(s) removed and is marked as uninstalled.";
@@ -830,7 +924,7 @@ namespace LocalLibrary
                     uninstall.Dispose();
                     return;
                 }
-                if (Settings.Settings.RemovePlay)
+                if (SettingsViewModel.Settings.RemovePlay)
                 {
                     Delete_PlayActions(actions, selectedGame);
                 }

@@ -34,6 +34,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Ookii.Dialogs.Wpf, Version=5.0.0.0, Culture=neutral, PublicKeyToken=66aa232afad40158, processorArchitecture=MSIL">
       <HintPath>packages\Ookii.Dialogs.Wpf.5.0.1\lib\net462\Ookii.Dialogs.Wpf.dll</HintPath>
     </Reference>
@@ -77,9 +81,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Converters.cs" />
+    <Compile Include="Converters\StringEqualsConverter.cs" />
     <Compile Include="GameSourceOption.cs" />
     <Compile Include="Helpers\ExportData.cs" />
+    <Compile Include="Helpers\ImportData.cs" />
+    <Compile Include="Helpers\LocalMetadataProvider.cs" />
+    <Compile Include="Helpers\Metadata.cs" />
+    <Compile Include="Helpers\MetadataExtractor.cs" />
     <Compile Include="Helpers\Migration.cs" />
+    <Compile Include="Helpers\PlayniteHelpers.cs" />
     <Compile Include="Helpers\Utils.cs" />
     <Compile Include="MergedItem.cs" />
     <Compile Include="FindInstallers.cs" />
@@ -90,6 +100,7 @@
     </Compile>
     <Compile Include="LocalGameController.cs" />
     <Compile Include="LocalLibrary.cs" />
+    <Compile Include="Models\MetadataExtractionRule.cs" />
     <Compile Include="Models\ReplaceRule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReportItem.cs" />
