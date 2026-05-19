@@ -118,7 +118,8 @@ namespace LocalLibrary.Helpers
                 var coverFile = Directory.EnumerateFiles(metadataDir, "Cover*").FirstOrDefault();
                 if (!string.IsNullOrEmpty(coverFile) && File.Exists(coverFile))
                 {
-                    game.CoverImage = ImportMediaFile(coverFile, game.Id);
+                    logger.Info($"Assigning CoverImage = {coverFile}");
+                    game.CoverImage = coverFile;
                     logger.Info($"Imported cover image for game '{game.Name}'");
                 }
 
@@ -126,7 +127,8 @@ namespace LocalLibrary.Helpers
                 var backgroundFile = Directory.EnumerateFiles(metadataDir, "Background*").FirstOrDefault();
                 if (!string.IsNullOrEmpty(backgroundFile) && File.Exists(backgroundFile))
                 {
-                    game.BackgroundImage = ImportMediaFile(backgroundFile, game.Id);
+                    logger.Info($"Assigning BackgroundImage = {backgroundFile}");
+                    game.BackgroundImage = backgroundFile;
                     logger.Info($"Imported background image for game '{game.Name}'");
                 }
 
