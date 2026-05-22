@@ -60,7 +60,7 @@ namespace LocalLibrary.Helpers
 
                     var allStatuses = API.Instance.Database.CompletionStatuses;
 
-                    var status = allStatuses.FirstOrDefault(s => string.Equals(s.Name, completionStatusValue, StringComparison.OrdinalIgnoreCase));
+                    var status = allStatuses.FirstOrDefault(s => string.Equals(s.Name, (string)completionStatusValue, StringComparison.OrdinalIgnoreCase));
                     
                     if (status != null)
                     {
@@ -377,7 +377,11 @@ namespace LocalLibrary.Helpers
 
                 try
                 {
-                    object value = data[element.Name];
+                    if (!data.TryGetValue(element.Name, out var value))
+                    {
+                        continue; // Skip if key doesn't exist in data
+                    }
+
                     if (value != null && !prop.PropertyType.IsAssignableFrom(value.GetType()))
                     {
                         value = Convert.ChangeType(value, prop.PropertyType);
@@ -387,7 +391,14 @@ namespace LocalLibrary.Helpers
                 }
                 catch (Exception ex)
                 {
-                    logger.Error(ex, $"{game.Name}: Failed to set property '{element.Name}' with value '{data[element.Name]}'");
+                    if (data.TryGetValue(element.Name, out var errorValue))
+                    {
+                        logger.Error(ex, $"{game.Name}: Failed to set property '{element.Name}' with value '{errorValue}'");
+                    }
+                    else
+                    {
+                        logger.Error(ex, $"{game.Name}: Failed to set property '{element.Name}'");
+                    }
                 }
             }
         }

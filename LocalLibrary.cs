@@ -14,7 +14,6 @@ using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
-using System.Runtime;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -137,8 +136,10 @@ namespace LocalLibrary
                             }
 
                             var safeName = $"{StringExtensions.CleanString(game.Name)}_metadata.json";
-                            var metadataPath = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath, safeName);
-                            ImportData.ImportExtra(game, metadataPath);
+                            var importDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                            var metadataPath = Path.Combine(importDir, safeName);
+                            var data = ImportData.ImportFromJson(game.Name, metadataPath);
+                            ImportData.ImportMetadataToGame(SettingsViewModel.Settings, game, data, importDir);
                             logger.Debug($"Successfully imported metadata for {game.Name}.");
                         }
                         catch (Exception ex)
@@ -157,7 +158,8 @@ namespace LocalLibrary
         public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
         {
             Finder iFinder = new Finder();
-            var game = args.Games.FirstOrDefault();
+            var games = args.Games.Where(g => g.PluginId == Id);
+            var game = games.FirstOrDefault();
             var gameInstaller = iFinder.GetActionsRoms(game, SettingsViewModel.Settings).Item1;
             var gameDir = Path.GetDirectoryName(gameInstaller);
             var exportDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
@@ -190,6 +192,111 @@ namespace LocalLibrary
                     {
                         API.Instance.Dialogs.ShowErrorMessage($"Import file not found: {importFilePath}", "Import Failed");
                     }
+                }
+            };
+
+            yield return new GameMenuItem
+            {
+                Description = "Import Game Data (Multiple)",
+                MenuSection = "Local Library",
+                Action = (mmeArgs) =>
+                {
+                    if (!games.Any())
+                    {
+                        API.Instance.Dialogs.ShowMessage("Please select at least one game to import data for.", "No Games Selected");
+                        return;
+                    }
+
+                    var progressTitle = "Importing Metadata...";
+                    var progressOptions = new GlobalProgressOptions(progressTitle, true)
+                    {
+                        IsIndeterminate = false
+                    };
+                    PlayniteApi.Dialogs.ActivateGlobalProgress((a) =>
+                    {
+                        a.ProgressMaxValue = games.Count();
+
+                        foreach (Game thisgame in games)
+                        {
+                            a.CurrentProgressValue++;
+                            a.Text = $"{progressTitle}\n\n{a.CurrentProgressValue}/{a.ProgressMaxValue}\n{thisgame.Name}";
+                            if (a.CancelToken.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
+                            try
+                            {
+                                iFinder = new Finder();
+                                gameInstaller = iFinder.GetActionsRoms(thisgame, SettingsViewModel.Settings).Item1;
+                                gameDir = Path.GetDirectoryName(gameInstaller);
+                                var importDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                                var importFilePath = Path.Combine(importDir, $"{StringExtensions.CleanString(thisgame.Name)}_metadata.json");
+                                if (File.Exists(importFilePath))
+                                {
+                                    var jsonData = File.ReadAllText(importFilePath);
+                                    var data = ImportData.ImportFromJson(thisgame.Name, jsonData);
+                                    ImportData.ImportMetadataToGame(SettingsViewModel.Settings, thisgame, data, importDir);
+                                    API.Instance.Database.Games.Update(thisgame);
+                                }
+                                else
+                                {
+                                    API.Instance.Dialogs.ShowErrorMessage($"Import file not found: {importFilePath}", "Import Failed");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, $"Failed to export metadata for game '{game.Name}': {ex.Message}");
+                                // Continue with next game even if this one fails
+                            }
+                        }
+                    }, progressOptions);
+                }
+            };
+
+            yield return new GameMenuItem
+            {
+                Description = "Export Game Data (Multiple)",
+                MenuSection = "Local Library",
+                Action = (mmeArgs) =>
+                {
+                    if (!games.Any())
+                    {
+                        API.Instance.Dialogs.ShowMessage("Please select at least one game to export data for.", "No Games Selected");
+                        return;
+                    }
+                    var progressTitle = "Exporting Metadata...";
+                    var progressOptions = new GlobalProgressOptions(progressTitle, true)
+                    {
+                        IsIndeterminate = false
+                    };
+                    PlayniteApi.Dialogs.ActivateGlobalProgress((a) =>
+                    {
+                        a.ProgressMaxValue = games.Count();
+                        foreach (Game thisgame in games)
+                        {
+                            a.CurrentProgressValue++;
+                            a.Text = $"{progressTitle}\n\n{a.CurrentProgressValue}/{a.ProgressMaxValue}\n{thisgame.Name}";
+                            if (a.CancelToken.IsCancellationRequested)
+                            {
+                                break;
+                            }
+                            try
+                            {
+                                iFinder = new Finder();
+                                gameInstaller = iFinder.GetActionsRoms(thisgame, SettingsViewModel.Settings).Item1;
+                                gameDir = Path.GetDirectoryName(gameInstaller);
+                                exportDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                                ExportData.ExportGameData(SettingsViewModel.Settings, thisgame, exportDir);
+                                logger.Debug($"Successfully exported metadata for {thisgame.Name}.");
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, $"Failed to export metadata for game '{thisgame.Name}': {ex.Message}");
+                                // Continue with next game even if this one fails
+                            }
+                        }
+                    }, progressOptions);
                 }
             };
         }
