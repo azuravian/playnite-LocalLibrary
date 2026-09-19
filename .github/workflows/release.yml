@@ -88,7 +88,7 @@ jobs:
           }
 
           $versionNoDot = $release -replace '\.', ''
-          $zipFileName = "Playnite$versionNoDot.zip"
+          $zipFileName = "Playnite$versionNoDot.7z"
           $zipUrl = "https://github.com/JosefNemec/Playnite/releases/download/$release/$zipFileName"
           $pnoutPath = Join-Path $env:TEMP $zipFileName
 
@@ -111,7 +111,7 @@ jobs:
             Remove-Item -Path $extractPath -Recurse -Force
           }
 
-          Expand-Archive -Path $pnoutPath -DestinationPath $extractPath -Force
+          7z x $pnoutPath "-o$extractPath" -y
 
           $toolboxPath = Join-Path $extractPath "Toolbox.exe"
           if (-not (Test-Path $toolboxPath)) {
