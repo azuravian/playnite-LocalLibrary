@@ -4,92 +4,136 @@ on:
   push:
     tags:
       - 'v*'  # Matches v1.6.0, v2.0, etc.
+  workflow_dispatch:
 
 permissions:
   contents: write
-  
+
 jobs:
   build-and-release:
     runs-on: windows-latest  # Required for .NET Framework
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Build with MSBuild
+      - name: Resolve build tag
+        id: tag
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSHED_TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:EVENT_NAME -eq "push") {
+            $tag = $env:PUSHED_TAG
+          }
+          else {
+            git fetch --tags --force
+
+            $tag = git tag --list "v*" --sort=-version:refname |
+              Select-Object -First 1
+
+            if (-not $tag) {
+              throw "No v* tags were found."
+            }
+
+            Write-Host "Manual run selected latest tag: $tag"
+            git checkout --force $tag
+          }
+
+          if (-not $tag) {
+            throw "Unable to determine a build tag."
+          }
+
+          "TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Set version variables
         shell: pwsh
         run: |
-          & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" LocalLibrary.sln /p:Configuration=Release
+          $tag = $env:TAG
+          $versionDots = $tag.TrimStart("v")
+          $version = $versionDots -replace '\.', '_'
 
-      - name: Set variables
-        id: vars
-        shell: pwsh
-        run: |
-          $tag = "${{ github.ref_name }}"  # e.g., v1.6.0
-          $versiondots = $tag.TrimStart("v")
-          $version = $versiondots -replace '\.', '_'
-          echo "TAG=$tag" >> $env:GITHUB_ENV
-          echo "VERSION=$version" >> $env:GITHUB_ENV
-          echo "VERSIONDOTS=$versiondots" >> $env:GITHUB_ENV
-          echo "OUTFILE=LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext" >> $env:GITHUB_ENV
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VERSIONDOTS=$versionDots" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "OUTFILE=LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Update extension.yaml version
         shell: pwsh
         run: |
-          (Get-Content extension.yaml) `
-            -replace '^(Version:\s*).+$', "Version: $env:VERSIONDOTS" `
-            | Set-Content extension.yaml
+          $path = Join-Path $env:GITHUB_WORKSPACE "extension.yaml"
+          $content = Get-Content -Path $path
+          $updated = $content -replace '^(Version:\s*).+$', "Version: $env:VERSIONDOTS"
+          $updated | Set-Content -Path $path -Encoding UTF8
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build with MSBuild
+        shell: pwsh
+        run: |
+          msbuild LocalLibrary.sln /p:Configuration=Release /m
 
       - name: Download latest Playnite release zip
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get latest release info
-          $release = gh api repos/JosefNemec/Playnite/releases/latest | ConvertFrom-Json
-          $pntag = $release.tag_name          # e.g., "10.37"
-          
-          # Remove periods to form the zip name
-          $versionNoDot = $pntag -replace '\.', ''
+          $release = gh api repos/JosefNemec/Playnite/releases/latest --jq '.tag_name'
+          if (-not $release) {
+            throw "Could not resolve the latest Playnite release tag."
+          }
+
+          $versionNoDot = $release -replace '\.', ''
           $zipFileName = "Playnite$versionNoDot.zip"
-          
-          # Build download URL
-          $zipUrl = "https://github.com/JosefNemec/Playnite/releases/download/$pntag/$zipFileName"
-          $pnoutPath = "$env:TEMP\$zipFileName"
-          
+          $zipUrl = "https://github.com/JosefNemec/Playnite/releases/download/$release/$zipFileName"
+          $pnoutPath = Join-Path $env:TEMP $zipFileName
+
           Write-Host "Downloading $zipUrl ..."
           Invoke-WebRequest -Uri $zipUrl -OutFile $pnoutPath
 
-          # Persist
-          echo "PNOUTPATH=$pnoutPath" >> $env:GITHUB_ENV
-          
+          "PNOUTPATH=$pnoutPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Extract Toolbox.exe
         shell: pwsh
         run: |
-          $extractPath = "$env:TEMP\Playnite"
-          $pnoutPath = "$env:PNOUTPATH"
-          Expand-Archive -Path "$pnoutPath" -DestinationPath $extractPath -Force
-          $toolboxPath = Join-Path $extractPath "Toolbox.exe"
+          $extractPath = Join-Path $env:TEMP "Playnite"
+          $pnoutPath = $env:PNOUTPATH
 
-          # Persist
-          echo "TBPATH=$toolboxPath" >> $env:GITHUB_ENV
-          echo "EXPATH=$extractPath" >> $env:GITHUB_ENV
+          if (-not (Test-Path $pnoutPath)) {
+            throw "Playnite zip not found: $pnoutPath"
+          }
+
+          if (Test-Path $extractPath) {
+            Remove-Item -Path $extractPath -Recurse -Force
+          }
+
+          Expand-Archive -Path $pnoutPath -DestinationPath $extractPath -Force
+
+          $toolboxPath = Join-Path $extractPath "Toolbox.exe"
+          if (-not (Test-Path $toolboxPath)) {
+            throw "Toolbox.exe not found in extracted Playnite archive."
+          }
+
+          "TBPATH=$toolboxPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "EXPATH=$extractPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Package with Toolbox
         shell: pwsh
         run: |
-          $toolboxPath = "$env:TBPATH"
-          $sourceDir = "$env:GITHUB_WORKSPACE\bin\Release\"
-          $destDir = "$env:GITHUB_WORKSPACE\package"
+          $toolboxPath = $env:TBPATH
+          $sourceDir = Join-Path $env:GITHUB_WORKSPACE "bin\Release"
+          $destDir = Join-Path $env:GITHUB_WORKSPACE "package"
 
-          # Ensure output directory exists
           New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-          
-          # Pack the extension
-          Start-Process $toolboxPath -ArgumentList "pack", "$sourceDir", "$destDir" -Wait
+
+          Start-Process -FilePath $toolboxPath -ArgumentList @("pack", $sourceDir, $destDir) -Wait -NoNewWindow
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: package/${{ env.OUTFILE }}
           generate_release_notes: true
@@ -99,50 +143,69 @@ jobs:
       - name: Append to LocalLibraryManifest.yaml
         shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required for gh CLI
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = $env:VERSION
-          $versiondots = $env:VERSIONDOTS
+          $versionDots = $env:VERSIONDOTS
           $tag = $env:TAG
           $releaseDate = (Get-Date -Format 'yyyy-MM-dd')
-      
-          # Download release notes using GitHub CLI
-          $notes = gh api repos/${{ github.repository }}/releases/tags/$tag | ConvertFrom-Json
-          $changes = $notes.body -split "`n" | ForEach-Object {
-            $line = $_.Trim()
 
-            # 1. Lines starting with "- * " -> "- "
-            $line = $line -replace "^- \* ", "- "
+          $manifestPath = "manifests/LocalLibraryManifest.yaml"
+          if (Test-Path $manifestPath) {
+            $manifest = Get-Content -Path $manifestPath -Raw
+            $escapedVersion = [regex]::Escape($versionDots)
 
-            # 2. Remove "#" characters
-            $line = $line -replace "#", ""
+            if ($manifest -match "(?m)^\s+- Version:\s+$escapedVersion\s*$") {
+              Write-Host "Manifest already contains version $versionDots. Skipping duplicate append."
+              exit 0
+            }
+          }
 
-            # 3. Skip empty lines that are just "-"
-            if ($line -eq "-") { $null } else { $line }
-          } | Where-Object { $_ -ne $null }
+          $notes = gh api "repos/${{ github.repository }}/releases/tags/$tag" --jq '.body'
+          if (-not $notes) {
+            $notes = ""
+          }
 
-          # 4. Fix final line
-          if ($changes[-1] -match "\*\*Full Changelog\*\*:") {
+          $changes = @()
+          if ($notes) {
+            $changes = $notes -split "`r?`n" | ForEach-Object {
+              $line = $_.Trim()
+
+              $line = $line -replace "^- \* ", "- "
+              $line = $line -replace "#", ""
+
+              if ($line -eq "-") {
+                $null
+              }
+              else {
+                $line
+              }
+            } | Where-Object { $_ -ne $null }
+          }
+
+          if ($changes.Count -gt 0 -and $changes[-1] -match "\*\*Full Changelog\*\*:") {
             $changes[-1] = $changes[-1] -replace "\*\*Full Changelog\*\*:", "Full Changelog -"
           }
-      
-          # Compose manifest block
+
+          $manifestDir = Split-Path -Path $manifestPath -Parent
+          if (-not (Test-Path $manifestDir)) {
+            New-Item -ItemType Directory -Force -Path $manifestDir | Out-Null
+          }
+
           $block = @"
-          
-            - Version: $versiondots
+
+            - Version: $versionDots
               RequiredApiVersion: 6.11.0
               ReleaseDate: $releaseDate
               PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/$tag/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_$version.pext
               Changelog:
-          $(( $changes | ForEach-Object { "    $_" }) -join "`n")
+          $($changes | ForEach-Object { "    $_" } | Join-String "`n")
           "@
 
-          # debug
           Write-Host "Appended manifest block:"
           Write-Host $block
 
-          # Append to manifest file
-          Add-Content "manifests/LocalLibraryManifest.yaml" $block
+          Add-Content -Path $manifestPath -Value $block -Encoding UTF8
 
       - name: Commit manifest update
         shell: pwsh
@@ -152,10 +215,15 @@ jobs:
 
           git fetch origin main
           git checkout main
-
-          git pull origin main
+          git pull --ff-only origin main
           git add manifests/LocalLibraryManifest.yaml
-          git commit -m "Update manifest for $env:VERSIONDOTS"
-          git push origin main
+
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "Update manifest for $env:VERSIONDOTS"
+            git push origin main
+          }
+          else {
+            Write-Host "No manifest changes to commit."
+          }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
