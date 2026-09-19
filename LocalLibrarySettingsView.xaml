@@ -25,6 +25,7 @@
         </ControlTemplate>
         <local:BoolToFontStyleConverter x:Key="BoolToFontStyleConverter"/>
         <local:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
+        <local:StringEqualsConverter x:Key="StringEqualsConverter"/>
         <CollectionViewSource x:Key="PlatformsView" Source="{Binding Settings.Platforms}">
             <CollectionViewSource.SortDescriptions>
                 <sys:SortDescription PropertyName="Name" Direction="Ascending"/>
@@ -39,6 +40,8 @@
             <CollectionViewSource.SortDescriptions>
                 <sys:SortDescription PropertyName="Name" Direction="Ascending"/>
             </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+        <CollectionViewSource x:Key="LocationOptionsView" Source="{Binding Settings.LocationOptions}">
         </CollectionViewSource>
     </UserControl.Resources>
 
@@ -260,7 +263,7 @@
         </TabItem>
         <TabItem BorderThickness="0.5">
             <TabItem.Header>
-                Ignore/Replace
+                Replace Rules
             </TabItem.Header>
             <Grid>
                 <!-- Instruction Text -->
@@ -306,7 +309,7 @@
                                                  Margin="5,0" Grid.Column="1"/>
                                         <TextBox Text="{Binding Replacement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                                  Margin="5,0" Grid.Column="2"/>
-                                        <Button Content="Remove" Command="{Binding DataContext.RemoveReplaceRuleCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                        <Button Content="Remove" Command="{Binding DataContext.RemoveReplaceRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                                 CommandParameter="{Binding}" Grid.Column="3"/>
                                     </Grid>
                                 </DataTemplate>
@@ -316,6 +319,87 @@
                         <Button Content="Add Rule" Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Top"
                                 Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" 
                                 Height="30" Command="{Binding AddReplaceRuleCommand}"/>
+                    </Grid>
+
+                </GroupBox>
+            </Grid>
+        </TabItem>
+
+        <TabItem BorderThickness="0.5">
+            <TabItem.Header>
+                Metadata Rules
+            </TabItem.Header>
+            <Grid>
+                <!-- Instruction Text -->
+                <TextBlock Margin="15,10,0,0" VerticalAlignment="Top" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" TextWrapping="Wrap">
+                    List to extract from folder names to use as metadata when adding a new game.
+                </TextBlock>
+
+                <GroupBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="10,46,10,26" >
+                    <GroupBox.Header>
+                        <TextBlock FontWeight="Bold">Extraction Rules</TextBlock>
+                    </GroupBox.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width=".75*"/>
+                            <ColumnDefinition Width=".75*"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width=".6*"/>
+                            <ColumnDefinition Width=".5*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Metadata 
+                                   Type"
+                                   TextWrapping="Wrap" FontWeight="Bold" Grid.Column="0" Margin="10,0,0,0"/>
+                        <TextBlock Text="Opening
+                                   Delimiter" 
+                                   TextWrapping="Wrap" FontWeight="Bold" Grid.Column="1" Margin="10,0,0,0"/>
+                        <TextBlock Text="Closing 
+                                   Delimiter"
+                                   TextWrapping="Wrap" FontWeight="Bold" Grid.Column="2" Margin="10,0,0,0"/>
+                        <TextBlock Text="Replacement
+                                   Pattern" 
+                                   TextWrapping="Wrap" FontWeight="Bold" Grid.Column="3" Margin="10,0,0,0"/>
+                        <TextBlock Text="Append" FontWeight="Bold" Grid.Column="4" Margin="10,0,0,0"/>
+
+                        <ItemsControl ItemsSource="{Binding Settings.MetadataExtractionRules}" HorizontalAlignment="Stretch" Grid.Row="1" Grid.ColumnSpan="6">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width=".75*"/>
+                                            <ColumnDefinition Width=".75*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width=".6*"/>
+                                            <ColumnDefinition Width=".5*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox ItemsSource="{Binding DataContext.MetadataTypeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  SelectedItem="{Binding MetadataType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Grid.Column="0"/>
+                                        <TextBox Text="{Binding OpenDelimiter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Margin="5,0" Grid.Column="1"/>
+                                        <TextBox Text="{Binding CloseDelimiter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Margin="5,0" Grid.Column="2"/>
+                                        <TextBox Text="{Binding Pattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Margin="5,0" Grid.Column="3"/>
+                                        <CheckBox Content="Append" IsChecked="{Binding Append, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="5,0" Grid.Column="4"/>
+                                        <Button Content="Remove" Command="{Binding DataContext.RemoveMetadataExtractionRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                CommandParameter="{Binding}" Grid.Column="5"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Content="Add Rule" Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="6" 
+                Height="30" Command="{Binding AddMetadataExtractionRuleCommand}"/>
                     </Grid>
 
                 </GroupBox>
@@ -383,8 +467,8 @@
                         <TextBlock Text="Select metadata elements to export:" FontWeight="Bold" Margin="0,0,0,10" TextWrapping="Wrap"/>
                         <Button Content="Reset to Default" Command="{Binding ResetExportMetadataCommand}" Margin="0,0,0,10" Width="140" HorizontalAlignment="Left"/>
                         <!-- Text Elements -->
-                        <TextBlock Text="Text Elements" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <ItemsControl ItemsSource="{Binding Settings.ExportTextElements}">
+                        <TextBlock Text="Text Properties" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.TextElements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
@@ -392,8 +476,8 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <!-- Status Elements -->
-                        <TextBlock Text="Status Elements" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <ItemsControl ItemsSource="{Binding Settings.ExportStatusElements}">
+                        <TextBlock Text="Status Properties" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.StatusElements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
@@ -401,8 +485,8 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <!-- Scores -->
-                        <TextBlock Text="Scores" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <ItemsControl ItemsSource="{Binding Settings.ExportScoreElements}">
+                        <TextBlock Text="Numeric Properties" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ItemsControl ItemsSource="{Binding Settings.NumericElements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
@@ -411,7 +495,7 @@
                         </ItemsControl>
                         <!-- Dates & Times -->
                         <TextBlock Text="Dates &amp; Times" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <ItemsControl ItemsSource="{Binding Settings.ExportDateElements}">
+                        <ItemsControl ItemsSource="{Binding Settings.DateElements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
@@ -420,7 +504,7 @@
                         </ItemsControl>
                         <!-- Media -->
                         <TextBlock Text="Media" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <ItemsControl ItemsSource="{Binding Settings.ExportMediaElements}">
+                        <ItemsControl ItemsSource="{Binding Settings.MediaElements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
@@ -429,7 +513,7 @@
                         </ItemsControl>
                         <!-- Scripts -->
                         <TextBlock Text="Scripts" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <ItemsControl ItemsSource="{Binding Settings.ExportScriptElements}">
+                        <ItemsControl ItemsSource="{Binding Settings.ScriptElements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="2"/>
@@ -439,22 +523,80 @@
                     </StackPanel>
                 </ScrollViewer>
                 <!-- Column 1: Export Settings -->
+                
                 <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Top">
-                    <TextBlock Text="Location Setting" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <ComboBox SelectedItem="{Binding Settings.LocationSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
-                        <ComboBoxItem Content="Use Default Path"/>
-                        <ComboBoxItem Content="Prompt for Location"/>
-                    </ComboBox>
-                    <TextBlock Text="Default Metadata Path" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding Settings.ImportMetadataOnAdd, UpdateSourceTrigger=PropertyChanged}" 
+                                  Content="Import existing Metadata when adding Games"
+                                  FontWeight="Bold" 
+                                  Margin="0,0,10,10" />
+                        <TextBlock Margin="3,4">
+                            <TextBlock.ToolTip>
+                                <TextBlock>
+                                    When enabled, metadata will be automatically exported whenever a new game is added.
+                                </TextBlock>
+                            </TextBlock.ToolTip>
+                            <ContentControl Template="{StaticResource InfoTag}" />
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Default Relative Metadata Path" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBlock Margin="3,4">
+                            <TextBlock.ToolTip>
+                                <TextBlock>
+                                    Automated exports will always use the relative path specified here.
+                                    <LineBreak /> 
+                                    This path is relative to a game's installation folder. If you have an installer path of
+                                    <LineBreak />
+                                    'G:\MyGames', for example, and a default metadata path of 'Metadata', the metadata will be
+                                    <LineBreak />
+                                    stored in 'G:\MyGames\[GameFolder]\Metadata'.
+                                </TextBlock>
+                                                    </TextBlock.ToolTip>
+                            <ContentControl Template="{StaticResource InfoTag}" />
+                        </TextBlock>
+                    </StackPanel>
                     <DockPanel Margin="0,0,0,15">
-                        <TextBox Text="{Binding Settings.DefaultMetadataPath, Mode=TwoWay}" MinWidth="120" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                        <Button Content="Browse" MinWidth="60" VerticalAlignment="Center" Command="{Binding DefaultBrowseCommand}"/>
+                        <TextBox Text="{Binding Settings.MetadataRelPath, UpdateSourceTrigger=PropertyChanged}" MinWidth="225" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <Button Content="Browse" MinWidth="60" VerticalAlignment="Center" Command="{Binding MetadataBrowseCommand}"/>
                     </DockPanel>
-                    <TextBlock Text="Config" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <ComboBox SelectedItem="{Binding Settings.ConfigSetting, Mode=TwoWay}" Margin="0,0,0,15" MinWidth="160">
-                        <ComboBoxItem Content="Use Default Metadata Set"/>
-                        <ComboBoxItem Content="Prompt for Metadata"/>
-                    </ComboBox>
+                    <TextBlock Text="Mass Metadata Export" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <Line Width="Auto" Stroke="Black" StrokeThickness="30" Fill="Black"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Location Setting" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBlock Margin="3,4">
+                            <TextBlock.ToolTip>
+                                <TextBlock>
+                                    Automated exports will always use the relative path specified in Default Metadata Path.
+                                    <LineBreak /> 
+                                    This setting can be used to control how manual exports behave. They can use the same path,
+                                    <LineBreak />
+                                    or you can export them to a absolute path outside of the game's folder.
+                                    <LineBreak />
+                                    In the latter case, each game will have a subfolder created to store its metadata.
+                                </TextBlock>
+                            </TextBlock.ToolTip>
+                            <ContentControl Template="{StaticResource InfoTag}" />
+                        </TextBlock>
+                    </StackPanel>
+                    <ComboBox x:Name="cbLocationOptions" 
+                              ItemsSource="{Binding Settings.LocationOptions}"
+                              SelectedItem="{Binding Settings.LocationSetting}" 
+                              Margin="0,0,0,15" MinWidth="160"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Export Metadata Now" Command="{Binding ExportMetadataCommand}" MinWidth="150" Height="30" HorizontalAlignment="Left"/>
+                        <TextBlock Margin="3,4">
+                            <TextBlock.ToolTip>
+                                <TextBlock>
+                                    Choose the format for exporting metadata.
+                                    <LineBreak /> 
+                                    JSON is more versatile and widely used, while XML may be preferred for compatibility with certain applications.
+                                </TextBlock>
+                            </TextBlock.ToolTip>
+                            <ContentControl Template="{StaticResource InfoTag}" />
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </TabItem>
