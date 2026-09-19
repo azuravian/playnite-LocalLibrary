@@ -1,4 +1,4 @@
-﻿using LocalLibrary.Helpers;
+using LocalLibrary.Helpers;
 using LocalLibrary.Models;
 using Playnite.SDK;
 using Playnite.SDK.Data;
@@ -618,8 +618,8 @@ namespace LocalLibrary
         {
             // If any group is empty or has duplicates, reset all
             bool needsReset =
-                HasDuplicatesOrMissing(Settings.TextElements, new[] { "Name", "Sorting Name", "Series", "Description", "Region", "Platforms", "Categories", "Features", "Genres", "Links", "Tags", "Version", "Developers", "Publishers", "Source", "AgeRatings", "Notes" }) ||
-                HasDuplicatesOrMissing(Settings.StatusElements, new[] { "CompletionStatus", "Hidden", "Favorite", "Enable HDR Support" }) ||
+                HasDuplicatesOrMissing(Settings.TextElements, new[] { "Name", "SortingName", "Series", "Description", "Region", "Platforms", "Categories", "Features", "Genres", "Links", "Tags", "Version", "Developers", "Publishers", "Source", "AgeRatings", "Notes" }) ||
+                HasDuplicatesOrMissing(Settings.StatusElements, new[] { "CompletionStatus", "Hidden", "Favorite", "EnableHDRSupport" }) ||
                 HasDuplicatesOrMissing(Settings.NumericElements, new[] { "UserScore", "CriticScore", "CommunityScore", "PlayCount", "TimePlayed" }) ||
                 HasDuplicatesOrMissing(Settings.DateElements, new[] { "ReleaseDate", "Added", "Modified", "LastActivity" }) ||
                 HasDuplicatesOrMissing(Settings.MediaElements, new[] { "Icon", "CoverImage", "BackgroundImage", "Logo", "Manual" }) ||

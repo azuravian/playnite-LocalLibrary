@@ -1,4 +1,4 @@
-﻿using LocalLibrary.Helpers;
+using LocalLibrary.Helpers;
 using LocalLibrary.Models;
 using Playnite.SDK;
 using Playnite.SDK.Models;
@@ -219,6 +219,9 @@ namespace LocalLibrary
                 // Game found - update installer and apply extracted metadata
                 logger.Info($"Found existing game '{matchingGame.Name}' for directory '{dir}'");
 
+                // Determine if the game already had linked files (actions or roms)
+                bool hadFiles = (matchingGame.GameActions != null && matchingGame.GameActions.Any()) || (matchingGame.Roms != null && matchingGame.Roms.Any());
+
                 if (useActions)
                 {
                     GameAction action = new GameAction();
@@ -235,7 +238,7 @@ namespace LocalLibrary
                     action.Name = "Install";
                     action.TrackingMode = TrackingMode.Default;
                     action.IsPlayAction = false;
-                    
+
                     if (matchingGame.GameActions == null)
                     {
                         matchingGame.GameActions = new ObservableCollection<GameAction>();
@@ -249,12 +252,30 @@ namespace LocalLibrary
                         Name = "Install",
                         Path = gameInstaller
                     };
-                    
+
                     if (matchingGame.Roms == null)
                     {
                         matchingGame.Roms = new ObservableCollection<GameRom>();
                     }
                     matchingGame.Roms.AddMissing(installRom);
+                }
+
+                // If the game previously had no linked files, optionally discover updates
+                try
+                {
+                    if (!hadFiles && settings.FindUpdates)
+                    {
+                        var updatesSearchDir = Path.GetDirectoryName(gameInstaller);
+                        if (!string.IsNullOrEmpty(updatesSearchDir) && Directory.Exists(Path.Combine(updatesSearchDir, "Updates")))
+                        {
+                            int updatesAdded = FindGameUpdates(matchingGame, updatesSearchDir, useActions);
+                            logger.Info($"Added {updatesAdded} updates for existing game '{matchingGame.Name}'");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, $"Failed to locate updates for existing game '{matchingGame.Name}': {ex.Message}");
                 }
 
                 // Apply extracted metadata to existing game

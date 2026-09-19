@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Playnite.SDK;
 using Playnite.SDK.Models;
+using System.Windows;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -354,7 +355,42 @@ namespace LocalLibrary.Helpers
             }
 
             var metaDataPath = Directory.GetFiles(importDir, "*metadata.json").FirstOrDefault();
-            ImportExtra(game, metaDataPath);
+            if (!string.IsNullOrEmpty(metaDataPath))
+            {
+                ImportExtra(game, metaDataPath);
+            }
+            else
+            {
+                // Prompt the user per-game to optionally select a metadata JSON file
+                try
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var message = $"Metadata file not found in {importDir}. Do you want to select a metadata JSON file for '{game.Name}'?";
+                        var result = System.Windows.MessageBox.Show(message, "Metadata Not Found", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+                        if (result == System.Windows.MessageBoxResult.Yes)
+                        {
+                            var selected = CustomDialogs.SelectFileWithDefault(importDir, "JSON files (*.json)|*.json|All files (*.*)|*.*", API.Instance.Dialogs, game);
+                            if (!string.IsNullOrEmpty(selected))
+                            {
+                                ImportExtra(game, selected);
+                            }
+                            else
+                            {
+                                logger.Info($"User canceled metadata selection for game '{game.Name}'");
+                            }
+                        }
+                        else
+                        {
+                            logger.Info($"User declined to select metadata for game '{game.Name}'");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, $"Failed to prompt for metadata file for game '{game.Name}': {ex.Message}");
+                }
+            }
             LoadTextElements(data, game, settings.TextElements);
 
             API.Instance.Database.Games.Update(game);

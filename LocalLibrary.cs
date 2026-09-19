@@ -18,6 +18,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using API = Playnite.SDK.API;
 
 namespace LocalLibrary
@@ -159,17 +160,17 @@ namespace LocalLibrary
         {
             Finder iFinder = new Finder();
             var games = args.Games.Where(g => g.PluginId == Id);
-            var game = games.FirstOrDefault();
-            var gameInstaller = iFinder.GetActionsRoms(game, SettingsViewModel.Settings).Item1;
-            var gameDir = Path.GetDirectoryName(gameInstaller);
-            var exportDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
             yield return new GameMenuItem
             {
                 Description = "Export Game Data",
                 MenuSection = "Local Library",
                 Action = (gmeArgs) =>
                 {
-                    ExportData.ExportGameData(SettingsViewModel.Settings, game, exportDir);
+                    var game = games.FirstOrDefault();
+                    var gameInstaller = iFinder.GetActionsRoms(game, SettingsViewModel.Settings).Item1;
+                    var gameDir = Path.GetDirectoryName(gameInstaller);
+                    var metadataDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                    ExportData.ExportGameData(SettingsViewModel.Settings, game, metadataDir);
                 }
             };
 
@@ -179,19 +180,20 @@ namespace LocalLibrary
                 MenuSection = "Local Library",
                 Action = (gmeArgs) =>
                 {
-                    var importFilePath = Path.Combine(exportDir, $"{StringExtensions.CleanString(game.Name)}_metadata.json");
-                    if (File.Exists(importFilePath))
+                    var game = games.FirstOrDefault();
+                    var gameInstaller = iFinder.GetActionsRoms(game, SettingsViewModel.Settings).Item1;
+                    var gameDir = Path.GetDirectoryName(gameInstaller);
+                    var metadataDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                    var importFilePath = Path.Combine(metadataDir, $"{StringExtensions.CleanString(game.Name)}_metadata.json");
+                    if (!File.Exists(importFilePath))
                     {
-                        var jsonData = File.ReadAllText(importFilePath);
-                        var data = ImportData.ImportFromJson(game.Name, jsonData);
-                        var importDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
-                        ImportData.ImportMetadataToGame(SettingsViewModel.Settings, game, data, importDir);
-                        API.Instance.Database.Games.Update(game);
+                        importFilePath = Directory.GetFiles(metadataDir, "*metadata.json").FirstOrDefault();
+                        if (!File.Exists(importFilePath)) { return; }
                     }
-                    else
-                    {
-                        API.Instance.Dialogs.ShowErrorMessage($"Import file not found: {importFilePath}", "Import Failed");
-                    }
+                    var jsonData = File.ReadAllText(importFilePath);
+                    var data = ImportData.ImportFromJson(game.Name, jsonData);
+                    ImportData.ImportMetadataToGame(SettingsViewModel.Settings, game, data, metadataDir);
+                    API.Instance.Database.Games.Update(game);
                 }
             };
 
@@ -228,25 +230,23 @@ namespace LocalLibrary
                             try
                             {
                                 iFinder = new Finder();
-                                gameInstaller = iFinder.GetActionsRoms(thisgame, SettingsViewModel.Settings).Item1;
-                                gameDir = Path.GetDirectoryName(gameInstaller);
-                                var importDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
-                                var importFilePath = Path.Combine(importDir, $"{StringExtensions.CleanString(thisgame.Name)}_metadata.json");
-                                if (File.Exists(importFilePath))
+                                var gameInstaller = iFinder.GetActionsRoms(thisgame, SettingsViewModel.Settings).Item1;
+                                var gameDir = Path.GetDirectoryName(gameInstaller);
+                                var metadataDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                                var importFilePath = Path.Combine(metadataDir, $"{StringExtensions.CleanString(thisgame.Name)}_metadata.json");
+                                if (!File.Exists(importFilePath))
                                 {
-                                    var jsonData = File.ReadAllText(importFilePath);
-                                    var data = ImportData.ImportFromJson(thisgame.Name, jsonData);
-                                    ImportData.ImportMetadataToGame(SettingsViewModel.Settings, thisgame, data, importDir);
-                                    API.Instance.Database.Games.Update(thisgame);
+                                    importFilePath = Directory.GetFiles(metadataDir, "*metadata.json").FirstOrDefault();
+                                    if (!File.Exists(importFilePath)) { continue; }
                                 }
-                                else
-                                {
-                                    API.Instance.Dialogs.ShowErrorMessage($"Import file not found: {importFilePath}", "Import Failed");
-                                }
+                                var jsonData = File.ReadAllText(importFilePath);
+                                var data = ImportData.ImportFromJson(thisgame.Name, jsonData);
+                                ImportData.ImportMetadataToGame(SettingsViewModel.Settings, thisgame, data, metadataDir);
+                                API.Instance.Database.Games.Update(thisgame);
                             }
                             catch (Exception ex)
                             {
-                                logger.Error(ex, $"Failed to export metadata for game '{game.Name}': {ex.Message}");
+                                logger.Error(ex, $"Failed to import metadata for game '{thisgame.Name}': {ex.Message}");
                                 // Continue with next game even if this one fails
                             }
                         }
@@ -284,10 +284,10 @@ namespace LocalLibrary
                             try
                             {
                                 iFinder = new Finder();
-                                gameInstaller = iFinder.GetActionsRoms(thisgame, SettingsViewModel.Settings).Item1;
-                                gameDir = Path.GetDirectoryName(gameInstaller);
-                                exportDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
-                                ExportData.ExportGameData(SettingsViewModel.Settings, thisgame, exportDir);
+                                var gameInstaller = iFinder.GetActionsRoms(thisgame, SettingsViewModel.Settings).Item1;
+                                var gameDir = Path.GetDirectoryName(gameInstaller);
+                                var metadataDir = Path.Combine(gameDir, SettingsViewModel.Settings.MetadataRelPath);
+                                ExportData.ExportGameData(SettingsViewModel.Settings, thisgame, metadataDir);
                                 logger.Debug($"Successfully exported metadata for {thisgame.Name}.");
                             }
                             catch (Exception ex)
@@ -553,7 +553,8 @@ namespace LocalLibrary
                 try
                 {
                     logger.Debug($"Running Command: {command} {gameInstallArgs} in {driveLetter ?? gameImagePath}");
-                    code = BuildAndRun(command, driveLetter, redirect, gameImagePath, gameInstallArgs);
+                    var startInfos = BuildInfos(command, driveLetter, redirect, gameImagePath, gameInstallArgs);
+                    code = RunBuilds(startInfos);
                 }
                 catch (Exception ex)
                 {
@@ -587,7 +588,7 @@ namespace LocalLibrary
                 if (extras.Count > 0)
                 {
                     logger.Debug("Multiple paths found, installing extras.");
-                    failed = Install_Extras(extras, selectedGame, install);
+                    failed = Install_Extras(extras, selectedGame);
                 }
             }
             if (!failed)
@@ -629,9 +630,8 @@ namespace LocalLibrary
         }
 
         // Extracted method to run the command with proper arguments
-        private static int BuildAndRun(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
+        private static List<ProcessStartInfo> BuildInfos(string command, string driveLetter, bool redirect, string gameImagePath, string gameInstallArgs)
         {
-            int code;
             ProcessStartInfo startInfoBase = new ProcessStartInfo();
             if (redirect)
             {
@@ -690,10 +690,18 @@ namespace LocalLibrary
 
             ProcessStartInfo startInfoUser = CloneProcessStartInfo(startInfoBase, elevated: false);
             ProcessStartInfo startInfoAdmin = CloneProcessStartInfo(startInfoBase, elevated: true);
-            
+            var startInfos = new List<ProcessStartInfo> { startInfoUser, startInfoAdmin };
+
+            return startInfos;
+        }
+
+        private static int RunBuilds(List<ProcessStartInfo> startInfos)
+        {
+            int code;
+            ProcessStartInfo startInfoUser = startInfos[0];
+            ProcessStartInfo startInfoAdmin = startInfos[1];
             try
             {
-                logger.Debug($"Attempting to run process with user privileges: {startInfoUser.FileName} {startInfoUser.Arguments}");
                 code = RunProcess(startInfoUser);
                 if (code == 2)
                 {
@@ -727,7 +735,7 @@ namespace LocalLibrary
                 logger.Error(ex, "Error running process with user privileges.");
                 code = -1; // Indicate an error occurred
             }
-            logger.Info($"Installer command: {startInfoBase.FileName} {startInfoBase.Arguments} returned code {code}.");
+            logger.Info($"Installer command: {startInfoUser.FileName} {startInfoUser.Arguments} returned code {code}.");
             return code;
         }
 
@@ -839,53 +847,98 @@ namespace LocalLibrary
             }
         }
 
-        public bool Install_Extras(List<Dictionary<String, String>> extras, Game selectedGame, LocalInstallController install)
+        public bool Install_Extras(List<Dictionary<String, String>> extras, Game selectedGame)
         {
             var failed = false;
-            foreach (Dictionary<String, String> extra in extras)
-            {
-                int code = 0;
-                string exce = "";
-                string command = null;
-                string extraInstallArgs = extra["InstallArgs"];
-                string extraPath = extra["Path"];
-                List<string> extensions = new List<string> { ".exe", ".msi", ".bat", ".ps1", ".ps" };
-                List<string> redext = new List<string> { ".bat", ".ps1", ".ps" };
 
-                if (extensions.Any(x => extraPath.ToLower().EndsWith(x)))
+            string tempBatPath = Path.Combine(Path.GetTempPath(), $"playnite_patcher_{Guid.NewGuid():N}.bat");
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("@echo off");
+            sb.AppendLine("TITLE Playnite Local Library Updater");
+            sb.AppendLine("COLOR 0A");
+            sb.AppendLine($"ECHO Updates and patches for {selectedGame.Name} are now being installed...");
+
+            // 2. Add each patch command to the batch file
+            foreach (var extra in extras)
+            {
+                string command = extra["Path"];
+                if (!File.Exists(command))
                 {
-                    command = extraPath;
-                }
-                else
-                {
+                    logger.Warn($"Extra installer not found: {command}");
                     continue;
                 }
-                try
+                string extension = Path.GetExtension(command).ToLowerInvariant();
+                string args = extra["InstallArgs"];
+
+                switch(extension)
                 {
-                    bool redirect = redext.Any(x => extraPath.ToLower().EndsWith(x));
-                    code = BuildAndRun(command, null, redirect, extraPath, extraInstallArgs);
+                    case ".msi":
+                        sb.AppendLine($"START /WAIT \"\" msiexec.exe /i \"{command}\" /qn /norestart {args}");
+                        break;
+                    case ".bat":
+                        sb.AppendLine($"CALL \"{command}\" {args}");
+                        break;
+                    case ".ps1":
+                    case ".ps":
+                        var pwsh = @"C:\Program Files\PowerShell\7\pwsh.exe";
+                        if (!File.Exists(pwsh))
+                        {
+                            pwsh = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
+                        }
+                        sb.AppendLine($"START /WAIT \"\" {pwsh} -NoProfile -NonInteractive -WindowStyle Hidden-ExecutionPolicy Bypass -File \"{command}\" {args}");
+                        break;
+                    default:
+                        sb.AppendLine($"START /WAIT \"\" \"{command}\" {args}");
+                        break;
                 }
-                catch (Exception ex)
-                {
-                    exce = ex.Message;
-                }
-                if (code != 0 || exce != "")
-                {
-                    MessageBoxResult result = MessageBox.Show("The installation was either canceled or failed.  Do you want to continue processing this installation?", "Installation canceled/failed", MessageBoxButton.YesNo);
-                    if (result == MessageBoxResult.No)
-                    {
-                        selectedGame.IsInstalling = false;
-                        selectedGame.InstallDirectory = null;
-                        selectedGame.IsInstalled = false;
-                        API.Instance.Database.Games.Update(selectedGame);
-                        install.Dispose();
-                        return true;
-                    }
-                    failed = false;
-                }
-                failed = false;
             }
-            return failed;
+
+            // 2a. finalize the batch file with a completion message and pause
+            sb.AppendLine("ECHO All updates and patches have been installed.");
+            sb.AppendLine("PAUSE");
+
+            File.WriteAllText(tempBatPath, sb.ToString(), Encoding.ASCII);
+
+            // 3. Execute the batch file
+            ProcessStartInfo scriptStartInfo = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{tempBatPath}\"",
+                UseShellExecute = true,
+                Verb = "runas", // Run as administrator
+                WindowStyle = ProcessWindowStyle.Normal
+            };
+
+            try
+            {
+                using (Process p = Process.Start(scriptStartInfo))
+                {
+                    p.WaitForExit();
+                    if (p.ExitCode != 0)
+                    {
+                        logger.Error($"Extra installers failed with exit code {p.ExitCode}.");
+                        failed = true;
+                    }
+
+                    // 4. Clean up the temporary batch file
+                    try
+                    {
+                        File.Delete(tempBatPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Warn($"Failed to delete temporary batch file: {ex.Message}");
+                    }
+                }
+
+                return failed;
+            }
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                logger.Error("Extra installer execution failed: The operation was canceled by the user.");
+                return true;
+            }
         }
 
         public void GameUninstaller(Game game, LocalUninstallController uninstall)
