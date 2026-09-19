@@ -87,8 +87,7 @@ jobs:
             throw "Could not resolve the latest Playnite release tag."
           }
 
-          $versionNoDot = $release -replace '\.', ''
-          $zipFileName = "Playnite$versionNoDot.7z"
+          $zipFileName = "$release.7z"
           $zipUrl = "https://github.com/JosefNemec/Playnite/releases/download/$release/$zipFileName"
           $pnoutPath = Join-Path $env:TEMP $zipFileName
 
