@@ -86,3 +86,10 @@ Packages:
     PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/v1.8.3/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_8_3.pext
     Changelog:
       - Fixes issue with games not installing present in 1.8.1 and 1.8.2.
+
+  - Version: 1.9.0
+    RequiredApiVersion: 6.11.0
+    ReleaseDate: 2026-09-19
+    PackageUrl: https://github.com/azuravian/playnite-LocalLibrary/releases/download/v1.9.0/LocalLibrary_2d01017d-024e-444d-80d3-f62f5be3fca5_1_9_0.pext
+    Changelog:
+
