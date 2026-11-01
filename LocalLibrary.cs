@@ -159,7 +159,33 @@ namespace LocalLibrary
         public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
         {
             Finder iFinder = new Finder();
-            var games = args.Games.Where(g => g.PluginId == Id);
+            var games = args.Games.Where(g => g.PluginId == Id).ToList();
+            if (games.Count == 0) yield break;
+            if (games.Count == 1)
+            {
+                yield return new GameMenuItem
+                {
+                    Description = "Link existing installation...",
+                    MenuSection = "Local Library",
+                    Action = (gmeArgs) =>
+                    {
+                        var game = games[0];
+                        string folder = CustomDialogs.SelectFolderWithDefault(game.InstallDirectory, PlayniteApi.Dialogs);
+                        if (string.IsNullOrEmpty(folder)) return;
+                        string executable = CustomDialogs.SelectFileWithDefault(folder, "Game executable|*.exe", PlayniteApi.Dialogs, game);
+                        if (string.IsNullOrEmpty(executable)) return;
+                        try
+                        {
+                            InstalledGameLinker.Link(game, folder, executable);
+                            PlayniteApi.Database.Games.Update(game);
+                        }
+                        catch (Exception ex)
+                        {
+                            PlayniteApi.Dialogs.ShowErrorMessage(ex.Message, "Could not link the existing installation");
+                        }
+                    }
+                };
+            }
             yield return new GameMenuItem
             {
                 Description = "Export Game Data",

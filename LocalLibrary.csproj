@@ -89,6 +89,11 @@
     <Compile Include="Helpers\MetadataExtractor.cs" />
     <Compile Include="Helpers\Migration.cs" />
     <Compile Include="Helpers\PlayniteHelpers.cs" />
+    <Compile Include="Helpers\UpdatePackageComparer.cs" />
+    <Compile Include="Helpers\ReleaseUpdateMetadata.cs" />
+    <Compile Include="Helpers\UpdateSourceOrdering.cs" />
+    <Compile Include="Helpers\InstallerSourceDiscovery.cs" />
+    <Compile Include="Helpers\InstalledGameLinker.cs" />
     <Compile Include="Helpers\Utils.cs" />
     <Compile Include="MergedItem.cs" />
     <Compile Include="FindInstallers.cs" />

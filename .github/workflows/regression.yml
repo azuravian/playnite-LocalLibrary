@@ -1,0 +1,23 @@
+name: Windows build and regression tests
+
+on:
+  push:
+    branches: [upstream/installation-link-and-update-discovery]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+      - name: Build plugin
+        shell: powershell
+        run: ./build.ps1
+      - name: Run five isolated fixtures
+        shell: powershell
+        run: ./tests/run-all-tests.ps1
