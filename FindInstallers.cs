@@ -62,13 +62,17 @@ namespace LocalLibrary
             List<Dictionary<String, String>> installers = new List<Dictionary<String, String>>();
             if (actions && game.GameActions != null)
             {
-                gameActions = game.GameActions.ToList();
+                gameActions = game.GameActions.Where(a => a != null && !a.IsPlayAction && a.Type == GameActionType.File).ToList();
                 foreach (GameAction ga in gameActions)
                 {
-                    if (gameInstallerPath == null && (ga.Name == "Install" || ga.Name == "Installer"))
+                    if (UpdateSourceOrdering.IsMainName(ga.Name))
                     {
-                        gameInstallerPath = API.Instance.ExpandGameVariables(game, ga).Path;
-                        gameInstallArgs = API.Instance.ExpandGameVariables(game, ga).Arguments;
+                        if (gameInstallerPath == null)
+                        {
+                            gameInstallerPath = API.Instance.ExpandGameVariables(game, ga).Path;
+                            gameInstallArgs = API.Instance.ExpandGameVariables(game, ga).Arguments;
+                        }
+                        continue;
                     }
                     else
                     {
@@ -83,6 +87,7 @@ namespace LocalLibrary
                 if (String.IsNullOrEmpty(gameInstallerPath) && gameActions.Count > 0)
                 {
                     gameInstallerPath = API.Instance.ExpandGameVariables(game, gameActions[0]).Path;
+                    gameInstallArgs = API.Instance.ExpandGameVariables(game, gameActions[0]).Arguments;
                     installers.Remove(installers.FirstOrDefault(a => a["Path"] == gameInstallerPath));
                 }
             }
@@ -92,9 +97,10 @@ namespace LocalLibrary
                 foreach (GameRom gr in gameRoms)
                 {
                     //Take the ROM with the name Install or Installer and use it as the installer
-                    if (gameInstallerPath == null && (gr.Name == "Install" || gr.Name == "Installer"))
+                    if (UpdateSourceOrdering.IsMainName(gr.Name))
                     {
-                        gameInstallerPath = gr.Path;
+                        if (gameInstallerPath == null) gameInstallerPath = gr.Path;
+                        continue;
                     }
                     else
                     {
@@ -346,115 +352,88 @@ namespace LocalLibrary
             return gamesAdded;
         }
 
+        private sealed class UpdateSourceItem
+        {
+            public string Name;
+            public string Path;
+            public GameAction Action;
+            public GameRom Rom;
+            public bool Main;
+            public bool Protected;
+        }
+
         public int FindGameUpdates(Game game, string dir, bool useActions)
         {
-            var gameUpdates = new List<Dictionary<string, string>>();
             var updatesPath = Path.Combine(dir, "Updates");
-            if (!Directory.Exists(updatesPath))
+            if (!Directory.Exists(updatesPath)) return 0;
+            var items = new List<UpdateSourceItem>();
+            var playActions = new List<GameAction>();
+            if (useActions && game.GameActions != null)
             {
-                return 0;
-            }
-
-            // Get all top-level files and directories
-            var entries = Directory.GetFileSystemEntries(updatesPath).OrderBy(Path.GetFileName);
-
-            // Filter out invalid actions
-            if (useActions)
-            {
-                gameUpdates = game.GameActions
-                    .Where(action => File.Exists(action.Path) || Directory.Exists(action.Path))
-                    .Select(action => new Dictionary<string, string>
-                    {
-                        { "Path", action.Path },
-                        { "Name", action.Name }
-                    })
-                    .ToList();
-            }
-            else
-            {
-                gameUpdates = game.Roms
-                    .Where(rom => File.Exists(rom.Path) || Directory.Exists(rom.Path))
-                    .Select(rom => new Dictionary<string, string>
-                    {
-                        { "Path", rom.Path },
-                        { "Name", rom.Name }
-                    })
-                    .ToList();
-            }
-
-            var preferredFilenames = new[] { "patch", "setup", "install" };   
-            var extensions = new[] { ".exe", ".msi", ".bat", ".ps", ".ps1" };
-
-            foreach (var entry in entries)
-            {
-                string entryName = string.Empty;
-
-                if (game.GameActions?.Any(action => action.Path == entry) == true
-                                || game.Roms?.Any(rom => rom.Path == entry) == true)
+                foreach (var action in game.GameActions)
                 {
-                    continue;
+                    if (action == null) continue;
+                    if (action.IsPlayAction) { playActions.Add(action); continue; }
+                    bool main = UpdateSourceOrdering.IsMainName(action.Name);
+                    items.Add(new UpdateSourceItem { Name = action.Name, Path = action.Path, Action = action,
+                        Main = main, Protected = main || action.Type != GameActionType.File });
                 }
-
-                if (File.Exists(entry) && extensions.Contains(Path.GetExtension(entry), StringComparer.OrdinalIgnoreCase))
+            }
+            else if (!useActions && game.Roms != null)
+            {
+                foreach (var rom in game.Roms)
                 {
-                    var newentry = new Dictionary<string, string> { { "Path", entry }, { "Name", "" } };
-                    gameUpdates.Add(newentry);
+                    if (rom == null) continue;
+                    bool main = UpdateSourceOrdering.IsMainName(rom.Name);
+                    items.Add(new UpdateSourceItem { Name = rom.Name, Path = rom.Path, Rom = rom, Main = main, Protected = main });
                 }
+            }
+            if (!items.Any(x => x.Main))
+            {
+                // Retain the established fallback primary rather than sorting an update into its place.
+                var primary = items.FirstOrDefault(x => x.Action == null || x.Action.Type == GameActionType.File);
+                if (primary == null) return 0;
+                primary.Main = primary.Protected = true;
+            }
+            var seen = new HashSet<string>(items.Where(x => !string.IsNullOrEmpty(x.Path)).Select(x => UpdateSourceOrdering.NormalizeSourcePath(x.Path)), StringComparer.OrdinalIgnoreCase);
+            string[] entries;
+            try { entries = Directory.GetFileSystemEntries(updatesPath); }
+            catch (IOException ex) { logger.Warn("Update source is unavailable: " + ex.Message); return 0; }
+            catch (UnauthorizedAccessException ex) { logger.Warn("Update source is inaccessible: " + ex.Message); return 0; }
+            if (entries.Length > 2048) { logger.Warn("Update folder is too large for automatic discovery; existing links were retained."); return 0; }
+            foreach (string entry in entries)
+            {
+                if (seen.Contains(UpdateSourceOrdering.NormalizeSourcePath(entry))) continue;
+                string candidate = null;
+                if (File.Exists(entry) && UpdateSourceOrdering.IsInstallerExtension(Path.GetExtension(entry)) &&
+                    !Path.GetFileNameWithoutExtension(entry).StartsWith("unins", StringComparison.OrdinalIgnoreCase))
+                    candidate = entry;
                 else if (Directory.Exists(entry))
                 {
-                    var validExecutable = Directory
-                        .EnumerateFiles(entry, "*", SearchOption.AllDirectories)
-                        .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
-                        .FirstOrDefault(file =>
-                            preferredFilenames.Contains(
-                                Path.GetFileNameWithoutExtension(file),
-                                StringComparer.OrdinalIgnoreCase)) ?? Directory.GetFiles(entry, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
-                    if (validExecutable != null)
-                    {
-                        var newentry = new Dictionary<string, string> { { "Path", validExecutable }, { "Name", "" } };
-                        gameUpdates.Add(newentry);
-                    }
+                    bool uncertain;
+                    candidate = InstallerSourceDiscovery.FindUniqueInstaller(entry, out uncertain);
+                    if (uncertain) logger.Warn("Choose the update installer manually for ambiguous or incomplete folder: " + entry);
                 }
+                if (candidate == null || !seen.Add(UpdateSourceOrdering.NormalizeSourcePath(candidate))) continue;
+                items.Add(new UpdateSourceItem { Path = candidate });
             }
-            // Sort and rename updates
-            var seenPaths = new HashSet<string>();
-            gameUpdates = gameUpdates
-                .Where(update => seenPaths.Add(update["Path"].ToString()))  // Adds path if not already in HashSet
-                .ToList();
-
-
-            gameUpdates = gameUpdates
-                .OrderBy(update => update["Name"].StartsWith("install", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(update => update["Path"])
-                .ToList();
-
-            for (int i = 1; i < gameUpdates.Count; i++)
+            items = UpdateSourceOrdering.Sort(items, x => x.Protected, x => x.Path);
+            int updateIndex = 0;
+            foreach (var item in items)
             {
-                gameUpdates[i]["Name"] = $"Update {i}";
+                if (!item.Protected) updateIndex++;
+                if (item.Action != null || item.Rom != null) continue;
+                string version = UpdateSourceOrdering.CreateKey(item.Path).TargetVersion;
+                item.Name = string.IsNullOrEmpty(version) ? "Update " + updateIndex : "Update " + version;
+                if (useActions)
+                    item.Action = new GameAction { Name = item.Name, Path = item.Path, Type = GameActionType.File,
+                        TrackingMode = TrackingMode.Default, IsPlayAction = false };
+                else item.Rom = new GameRom { Name = item.Name, Path = item.Path };
             }
-
             if (useActions)
-            {
-                var gameActions = gameUpdates.Select(update => new GameAction
-                {
-                    Name = update["Name"],
-                    Path = update["Path"],
-                    Type = GameActionType.File,
-                    TrackingMode = TrackingMode.Default,
-                    IsPlayAction = false
-                });
-                game.GameActions = new ObservableCollection<GameAction>(gameActions);
-            }
-            else
-            {
-                var gameRoms = gameUpdates.Select(update => new GameRom
-                {
-                    Name = update["Name"],
-                    Path = update["Path"]
-                });
-                game.Roms = new ObservableCollection<GameRom>(gameRoms);
-            }
-            return gameUpdates.Count - 1;
+                game.GameActions = new ObservableCollection<GameAction>(items.Select(x => x.Action).Concat(playActions));
+            else game.Roms = new ObservableCollection<GameRom>(items.Select(x => x.Rom));
+            return updateIndex;
         }
 
         public List<Game> FindInstallers(List<string> installPaths, LocalLibrarySettings settings, List<ReplaceRule> replacelist)
